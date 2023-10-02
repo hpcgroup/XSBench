@@ -12,7 +12,7 @@ Umpire_PATH ?= ${SPACK_ENV}/.spack-env/view/
 Umpire_INCLUDE_DIR = $(Umpire_PATH)/include
 Umpire_LIB_DIR = $(Umpire_PATH)/lib
 
-CPP_BIN ?= /sw/summit/gcc/11.2.0-0/bin/g++
+CPP_BIN ?= $(shell which g++)
 
 CUDA_PATH   ?= ${CUDA_HOME}
 COMPILER    ?= nvidia
