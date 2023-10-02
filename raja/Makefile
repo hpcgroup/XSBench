@@ -12,6 +12,10 @@ Umpire_PATH ?= ${SPACK_ENV}/.spack-env/view/
 Umpire_INCLUDE_DIR = $(Umpire_PATH)/include
 Umpire_LIB_DIR = $(Umpire_PATH)/lib
 
+camp_PATH ?= ${SPACK_ENV}/.spack-env/view/
+camp_INCLUDE_DIR = $(camp_PATH)/include
+camp_LIB_DIR = $(camp_PATH)/lib
+
 CPP_BIN ?= $(shell which g++)
 
 CUDA_PATH   ?= ${CUDA_HOME}
@@ -49,7 +53,13 @@ obj = $(source:.cpp=.o)
 CXXFLAGS := #-Wall
 
 # Linker Flags
-LDFLAGS = -lm
+LDFLAGS = -lm -Wl,-rpath=$(RAJA_LIB_DIR):$(Umpire_LIB_DIR)
+
+# HIP Compiler
+ifeq ($(COMPILER),hip)
+  CXX = hipcc
+  CXXFLAGS +=  -std=c++17 -DHIP_EXEC
+endif
 
 # NVIDIA Compiler
 ifeq ($(COMPILER),nvidia)
@@ -122,14 +132,14 @@ RAJA_LDFLAGS = -L$(RAJA_LIB_DIR) -Wl,-rpath=$(RAJA_LIB_DIR)
 RAJA_CXXFLAGS = -I./ -I$(RAJA_INCLUDE_DIR)
 
 Umpire_LIBS = -lumpire -lcamp
-Umpire_LDFLAGS = -L$(Umpire_LIB_DIR) -Wl,-rpath=$(RAJA_LIB_DIR)
-Umpire_CXXFLAGS = -I./ -I$(Umpire_INCLUDE_DIR)
+Umpire_LDFLAGS = -L$(Umpire_LIB_DIR) -Wl,-rpath=$(Umpire_LIB_DIR) -L$(camp_LIB_DIR)
+Umpire_CXXFLAGS = -I./ -I$(Umpire_INCLUDE_DIR) -I$(camp_INCLUDE_DIR)
 
 CUDA_LDFLAGS = -L$(CUDA_PATH)/lib
 CUDA_CXXFLAGS = -I./ -I$(CUDA_PATH)/include
 
 $(program): $(obj) XSbench_header.hpp Makefile 
-	$(CXX) -forward-unknown-to-host-compiler -Xcompiler -O3 --extended-lambda -arch=sm_70  -g -G -O3 $(RAJA_LDFLAGS) $(Umpire_LDFLAGS) $(CUDA_LDFLAGS) $(obj) $(RAJA_LIBS) $(Umpire_LIBS) -o $@ $(LDFLAGS)
+	$(CXX) $(RAJA_LDFLAGS) $(Umpire_LDFLAGS) $(CUDA_LDFLAGS) $(obj) $(RAJA_LIBS) $(Umpire_LIBS) $(CXXFLAGS) -o $@ $(LDFLAGS)
 
 %.o: %.cpp XSbench_header.hpp Makefile $(RAJA_CPP_DEPENDS)
 	$(CXX) $(RAJA_CXXFLAGS) $(Umpire_CXXFLAGS) $(CUDA_CXXFLAGS) $(CXXFLAGS) -c $< -o $@
