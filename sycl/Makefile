@@ -7,6 +7,9 @@ OPTIMIZE    ?= yes
 DEBUG       ?= no
 PROFILE     ?= no
 MPI         ?= no
+TARGET ?=
+SM_VERSION ?= 
+OFFLOAD_ARCH ?=
 
 #===============================================================================
 # Program name & source code list
@@ -45,7 +48,6 @@ endif
 ifeq ($(CC),llvm)
   CC = clang++
   CFLAGS += -fsycl
-  LDFLAGS += -lOpenCL
 endif
 
 # IntelOneAPI Compiler
@@ -54,9 +56,27 @@ ifeq ($(CC),oneapi)
   CFLAGS += -fsycl
 endif
 
-ifeq ($(CC),opensycl)
-  CC = syclcc
-  CFLAGS += -fsycl
+# AdaptiveCpp
+ifeq ($(CC),adaptivecpp)
+  CC = acpp
+endif
+
+ifeq ($(TARGET),CUDA)
+  ifeq ($(CC),acpp)
+	CFLAGS += --acpp-targets="cuda:sm_${SM_VERSION}"
+  else
+	CFLAGS += -fsycl-targets=nvptx64-nvidia-cuda \
+			  -Xsycl-target-backend --cuda-gpu-arch=sm_${SM_VERSION}
+  endif
+endif
+
+ifeq ($(TARGET),HIP)
+  ifeq ($(CC),acpp)
+	CFLAGS += --acpp-targets="hip:${OFFLOAD_ARCH}"
+  else
+	CFLAGS += -fsycl-targets=amdgcn-amd-amdhsa \
+			  -Xsycl-target-backend --offload-arch=${SM_VERSION}
+  endif
 endif
 
 # Debug Flags
