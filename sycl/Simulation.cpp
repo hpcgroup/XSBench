@@ -68,17 +68,17 @@ unsigned long long run_event_based_simulation(Inputs in, SimulationData SD, int 
     if(mype==0) printf("Beginning event based simulation...\n");
 
     // queue a kernel to be run, as a lambda
-    sycl_q.submit([&](handler &cgh) {
+    sycl_q.submit([&](sycl::handler &cgh) {
         ////////////////////////////////////////////////////////////////////////////////
         // Create Device Accessors for Device Buffers
         ////////////////////////////////////////////////////////////////////////////////
         sycl::accessor num_nucs {num_nucs_d, cgh, sycl::read_only};
         sycl::accessor concs {concs_d, cgh, sycl::read_only};
         sycl::accessor mats {mats_d, cgh, sycl::read_only};
-        sycl::accessor nuclide_grid {nuclide_grid_d, cgh, sycl::read_only};
         sycl::accessor unionized_energy_array {unionized_energy_array_d, cgh, sycl::read_only};
         sycl::accessor index_grid {index_grid_d, cgh, sycl::read_only};
-        sycl::accessor verification {verification_d, sycl::write_only, sycl::no_init};
+        sycl::accessor nuclide_grid {nuclide_grid_d, cgh, sycl::read_only};
+        sycl::accessor verification {verification_d, cgh, sycl::write_only, sycl::no_init};
 
         ////////////////////////////////////////////////////////////////////////////////
         // XS Lookup Simulation Loop
@@ -143,7 +143,7 @@ unsigned long long run_event_based_simulation(Inputs in, SimulationData SD, int 
     
     if(mype==0) printf("Kernel initialization, compilation, and launch took %.2lf seconds.\n", stop-start);
 
-    verification_d.get_host_acess();
+    verification_d.get_host_access();
 
 	// Host reduces the verification array
 	unsigned long long verification_scalar = 0;
