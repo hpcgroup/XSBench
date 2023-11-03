@@ -114,6 +114,7 @@ void calculate_macro_xs( double p_energy, int mat, long n_isotopes,
 
 // GridInit.c
 SimulationData grid_init_do_not_profile( Inputs in, int mype );
+void release_memory(SimulationData SD);
 
 // XSutils.c
 int NGP_compare( const void * a, const void * b );

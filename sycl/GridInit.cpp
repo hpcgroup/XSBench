@@ -174,3 +174,11 @@ SimulationData grid_init_do_not_profile( Inputs in, int mype )
 	return SD;
 
 }
+
+void release_memory(SimulationData SD) {
+	free(SD.num_nucs);
+	free(SD.concs);
+	free(SD.mats);
+    free(SD.unionized_energy_array);
+    free(SD.nuclide_grid);
+}

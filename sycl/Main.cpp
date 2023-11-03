@@ -97,6 +97,8 @@ int main( int argc, char* argv[] )
 		printf("Simulation complete.\n" );
 	}
 
+    release_memory(SD);
+
 	// End Simulation Timer
 	omp_end = get_time();
 
