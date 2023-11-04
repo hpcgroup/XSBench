@@ -75,7 +75,7 @@ ifeq ($(TARGET),HIP)
 	CFLAGS += --acpp-targets="hip:${OFFLOAD_ARCH}"
   else
 	CFLAGS += -fsycl-targets=amdgcn-amd-amdhsa \
-			  -Xsycl-target-backend --offload-arch=${SM_VERSION}
+			  -Xsycl-target-backend --offload-arch=${OFFLOAD_ARCH}
   endif
 endif
 
