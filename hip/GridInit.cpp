@@ -77,6 +77,25 @@ SimulationData move_simulation_data_to_device( Inputs in, int mype, SimulationDa
 
 }
 
+// Release device memory
+void release_device_memory(SimulationData GSD) {
+	hipFree(GSD.num_nucs);
+	hipFree(GSD.concs);
+	hipFree(GSD.mats);
+	hipFree(GSD.unionized_energy_array);
+	hipFree(GSD.nuclide_grid);
+	hipFree(GSD.verification);
+}
+
+void release_memory(SimulationData SD) {
+	free(SD.num_nucs);
+	free(SD.concs);
+	free(SD.mats);
+	free(SD.unionized_energy_array);
+	free(SD.nuclide_grid);
+	free(SD.verification);
+}
+
 SimulationData grid_init_do_not_profile( Inputs in, int mype )
 {
 	// Structure to hold all allocated simuluation data arrays
@@ -134,6 +153,10 @@ SimulationData grid_init_do_not_profile( Inputs in, int mype )
 	}
 	*/
 	
+    // Allocate Verification Array
+    size_t sz = in.lookups * sizeof(unsigned long);
+    SD.verification = (unsigned long *) malloc(sz);
+    nbytes += sz;
 
 	////////////////////////////////////////////////////////////////////
 	// Initialize Acceleration Structure

@@ -38,8 +38,6 @@ int main( int argc, char* argv[] )
 	if( in.binary_mode == WRITE && mype == 0 )
 		binary_write(in, SD);
 
-	// Move data to GPU
-	SimulationData GSD = move_simulation_data_to_device( in, mype, SD );
 
 	// =====================================================================
 	// Cross Section (XS) Parallel Lookup Simulation
@@ -62,7 +60,7 @@ int main( int argc, char* argv[] )
 	if( in.simulation_method == EVENT_BASED )
 	{
 		if( in.kernel_id == 0 )
-			verification = run_event_based_simulation_baseline(in, GSD, mype);
+			verification = run_event_based_simulation_baseline(in, SD, mype);
 /*
 		else if( in.kernel_id == 1 )
 			verification = run_event_based_simulation_optimization_1(in, GSD, mype);
@@ -97,6 +95,8 @@ int main( int argc, char* argv[] )
 
 	// End Simulation Timer
 	omp_end = get_time();
+
+    release_memory(SD);
 
 	// Final Hash Step
 	verification = verification % 999983;
