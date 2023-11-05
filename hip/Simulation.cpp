@@ -41,7 +41,7 @@ unsigned long long run_event_based_simulation_baseline(Inputs in, SimulationData
 
     unsigned long verification_scalar = 0;
     for( int i =0; i < in.lookups; i++ )
-        verification_scalar += v[i];
+        verification_scalar += SD.verification[i];
 
 	return verification_scalar;
 }
