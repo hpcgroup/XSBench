@@ -6,6 +6,7 @@ COMPILER    = amd
 OPTIMIZE    = yes
 DEBUG       = no
 PROFILE     = no
+OFFLOAD_ARCH ?= gfx90a
 
 #===============================================================================
 # Program name & source code list
@@ -36,6 +37,7 @@ LDFLAGS = -lm
 # AMD
 ifeq ($(COMPILER),amd)
   CC = hipcc
+  CFLAGS += --offload-arch=${OFFLOAD_ARCH}
 endif
 
 # Debug Flags
