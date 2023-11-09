@@ -1,12 +1,15 @@
 // Material data is hard coded into the functions in this file.
 // Note that there are 12 materials present in H-M (large or small)
 
-#include "XSbench_header.cuh"
+#include "XSbench_header.h"
 
 // num_nucs represents the number of nuclides that each material contains
 int * load_num_nucs(long n_isotopes)
 {
-	int * num_nucs = (int*)malloc(12*sizeof(int));
+    auto& rm = umpire::ResourceManager::getInstance();
+	umpire::Allocator allocator = rm.getAllocator("HOST");
+
+	int * num_nucs = static_cast<int*>(allocator.allocate(12*sizeof(int)));
 	
 	// Material 0 is a special case (fuel). The H-M small reactor uses
 	// 34 nuclides, while H-M larges uses 300.
@@ -40,7 +43,10 @@ int * load_mats( int * num_nucs, long n_isotopes, int * max_num_nucs )
 		if( num_nucs[m] > *max_num_nucs )
 			*max_num_nucs = num_nucs[m];
 	}
-	int * mats = (int *) malloc( num_mats * (*max_num_nucs) * sizeof(int) );
+    auto& rm = umpire::ResourceManager::getInstance();
+	umpire::Allocator allocator = rm.getAllocator("HOST");
+
+	int * mats = static_cast<int *>(allocator.allocate( num_mats * (*max_num_nucs) * sizeof(int)));
 
 	// Small H-M has 34 fuel nuclides
 	int mats0_Sml[] =  { 58, 59, 60, 61, 40, 42, 43, 44, 45, 46, 1, 2, 3, 7,
@@ -99,7 +105,11 @@ int * load_mats( int * num_nucs, long n_isotopes, int * max_num_nucs )
 double * load_concs( int * num_nucs, int max_num_nucs )
 {
 	uint64_t seed = STARTING_SEED * STARTING_SEED;
-	double * concs = (double *) malloc( 12 * max_num_nucs * sizeof( double ) );
+
+    auto& rm = umpire::ResourceManager::getInstance();
+	umpire::Allocator allocator = rm.getAllocator("HOST");
+
+	double * concs = static_cast<double *>(allocator.allocate( 12 * max_num_nucs * sizeof( double )));
 	
 	for( int i = 0; i < 12; i++ )
 		for( int j = 0; j < num_nucs[i]; j++ )

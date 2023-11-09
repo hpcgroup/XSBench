@@ -1,4 +1,4 @@
-#include "XSbench_header.cuh"
+#include "XSbench_header.h"
 
 // Moves all required data structures to the GPU's memory space
 SimulationData move_simulation_data_to_device( Inputs in, int mype, SimulationData SD )
@@ -28,6 +28,9 @@ SimulationData move_simulation_data_to_device( Inputs in, int mype, SimulationDa
 
 	// Shallow copy of CPU simulation data to GPU simulation data
 	SimulationData GSD = SD;
+
+    auto& rm = umpire::ResourceManager::getInstance();
+	umpire::Allocator allocator = rm.getAllocator("DEVICE");
 
 	// Move data to GPU memory space
 	sz = GSD.length_num_nucs * sizeof(int);
@@ -63,7 +66,7 @@ SimulationData move_simulation_data_to_device( Inputs in, int mype, SimulationDa
 	// Allocate verification array on device. This structure is not needed on CPU, so we don't
 	// have to copy anything over.
 	sz = in.lookups * sizeof(unsigned long);
-	gpuErrchk( cudaMalloc((void **) &GSD.verification, sz) );
+    GSD.verification = static_cast<unsigned long *>(allocator.allocate(sz));
 	total_sz += sz;
 	GSD.length_verification = in.lookups;
 	
@@ -114,10 +117,13 @@ SimulationData grid_init_do_not_profile( Inputs in, int mype )
 	// a random order, but all cross section interaction channels and the
 	// energy level are read whenever the gridpoint is accessed, meaning the
 	// AOS is more cache efficient.
+    
+    auto& rm = umpire::ResourceManager::getInstance();
+	umpire::Allocator allocator = rm.getAllocator("HOST");
 	
 	// Initialize Nuclide Grid
 	SD.length_nuclide_grid = in.n_isotopes * in.n_gridpoints;
-	SD.nuclide_grid     = (NuclideGridPoint *) malloc( SD.length_nuclide_grid * sizeof(NuclideGridPoint));
+	SD.nuclide_grid     = static_cast<NuclideGridPoint *>(allocator.allocate( SD.length_nuclide_grid * sizeof(NuclideGridPoint)));
 	assert(SD.nuclide_grid != NULL);
 	nbytes += SD.length_nuclide_grid * sizeof(NuclideGridPoint);
 	for( int i = 0; i < SD.length_nuclide_grid; i++ )
@@ -161,7 +167,7 @@ SimulationData grid_init_do_not_profile( Inputs in, int mype )
 
 		// Allocate space to hold the union of all nuclide energy data
 		SD.length_unionized_energy_array = in.n_isotopes * in.n_gridpoints;
-		SD.unionized_energy_array = (double *) malloc( SD.length_unionized_energy_array * sizeof(double));
+		SD.unionized_energy_array = static_cast<double *>(allocator.allocate( SD.length_unionized_energy_array * sizeof(double)));
 		assert(SD.unionized_energy_array != NULL );
 		nbytes += SD.length_unionized_energy_array * sizeof(double);
 
@@ -174,7 +180,7 @@ SimulationData grid_init_do_not_profile( Inputs in, int mype )
 
 		// Allocate space to hold the acceleration grid indices
 		SD.length_index_grid = SD.length_unionized_energy_array * in.n_isotopes;
-		SD.index_grid = (int *) malloc( SD.length_index_grid * sizeof(int));
+		SD.index_grid = static_cast<int *>(allocator.allocate( SD.length_index_grid * sizeof(int)));
 		assert(SD.index_grid != NULL);
 		nbytes += SD.length_index_grid * sizeof(int);
 
@@ -214,7 +220,8 @@ SimulationData grid_init_do_not_profile( Inputs in, int mype )
 		if(mype == 0) printf("Intializing hash grid...\n");
 		SD.length_unionized_energy_array = 0;
 		SD.length_index_grid  = in.hash_bins * in.n_isotopes;
-		SD.index_grid = (int *) malloc( SD.length_index_grid * sizeof(int)); 
+
+		SD.index_grid = static_cast<int *>(allocator.allocate( SD.length_index_grid * sizeof(int)));
 		assert(SD.index_grid != NULL);
 		nbytes += SD.length_index_grid * sizeof(int);
 
@@ -255,6 +262,11 @@ SimulationData grid_init_do_not_profile( Inputs in, int mype )
 	// materials have the same number of nuclides.
 	SD.concs = load_concs(SD.num_nucs, SD.max_num_nucs);
 	SD.length_concs = SD.length_mats;
+
+
+    SD.verification = static_cast<unsigned long *>(allocator.allocate(in.lookups * sizeof(unsigned long)));
+	nbytes += in.lookups * sizeof(unsigned long);
+	SD.length_verification = in.lookups;
 
 	if(mype == 0) printf("Intialization complete. Allocated %.0lf MB of data on CPU.\n", nbytes/1024.0/1024.0 );
 

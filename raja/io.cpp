@@ -1,4 +1,4 @@
-#include "XSbench_header.cuh"
+#include "XSbench_header.h"
 
 // Prints program logo
 void logo(int version)

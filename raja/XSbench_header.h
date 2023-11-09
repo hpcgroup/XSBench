@@ -5,11 +5,14 @@
 #include<stdlib.h>
 #include<math.h>
 #include<assert.h>
-#include<cuda.h>
-#include <thrust/reduce.h>
-#include <thrust/partition.h>
 #include<stdint.h>
 #include <chrono> 
+
+#include<cuda.h>
+
+#include <RAJA/RAJA.hpp>
+#include "umpire/Allocator.hpp"
+#include "umpire/ResourceManager.hpp"
 
 // Grid types
 #define UNIONIZED 0
@@ -116,24 +119,6 @@ __host__ __device__ long grid_search_nuclide( long n, double quarry, NuclideGrid
 __device__ int pick_mat( uint64_t * seed );
 __host__ __device__ double LCG_random_double(uint64_t * seed);
 __device__ uint64_t fast_forward_LCG(uint64_t seed, uint64_t n);
-
-unsigned long long run_event_based_simulation_optimization_1(Inputs in, SimulationData GSD, int mype);
-__global__ void sampling_kernel(Inputs in, SimulationData GSD );
-__global__ void xs_lookup_kernel_optimization_1(Inputs in, SimulationData GSD );
-
-unsigned long long run_event_based_simulation_optimization_2(Inputs in, SimulationData GSD, int mype);
-__global__ void xs_lookup_kernel_optimization_2(Inputs in, SimulationData GSD, int m );
-
-unsigned long long run_event_based_simulation_optimization_3(Inputs in, SimulationData GSD, int mype);
-__global__ void xs_lookup_kernel_optimization_3(Inputs in, SimulationData GSD, int m );
-
-unsigned long long run_event_based_simulation_optimization_4(Inputs in, SimulationData GSD, int mype);
-__global__ void xs_lookup_kernel_optimization_4(Inputs in, SimulationData GSD, int m, int n_lookups, int offset );
-
-unsigned long long run_event_based_simulation_optimization_5(Inputs in, SimulationData GSD, int mype);
-__global__ void xs_lookup_kernel_optimization_5(Inputs in, SimulationData GSD, int n_lookups, int offset );
-
-unsigned long long run_event_based_simulation_optimization_6(Inputs in, SimulationData GSD, int mype);
 
 // GridInit.cu
 SimulationData grid_init_do_not_profile( Inputs in, int mype );
