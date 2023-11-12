@@ -89,6 +89,18 @@ void release_device_memory(SimulationData GSD) {
 	allocator.deallocate(GSD.verification);
 }
 
+void release_memory(SimulationData SD) {
+    auto& rm = umpire::ResourceManager::getInstance();
+	umpire::Allocator allocator = rm.getAllocator("HOST");	
+
+	allocator.deallocate(SD.num_nucs);
+	allocator.deallocate(SD.concs);
+	allocator.deallocate(SD.mats);
+	allocator.deallocate(SD.unionized_energy_array);
+	allocator.deallocate(SD.nuclide_grid);
+	allocator.deallocate(SD.verification);
+}
+
 SimulationData grid_init_do_not_profile( Inputs in, int mype )
 {
 	// Structure to hold all allocated simuluation data arrays
