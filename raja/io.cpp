@@ -120,12 +120,21 @@ void print_inputs(Inputs in, int nprocs, int version )
 	logo(version);
 	center_print("INPUT SUMMARY", 79);
 	border_print();
-	printf("Programming Model:            CUDA\n");
+	printf("Programming Model:            RAJA\n");
+#if defined(RAJA_ENABLE_CUDA)
 	cudaDeviceProp prop;
 	int device;
 	cudaGetDevice(&device);
 	cudaGetDeviceProperties ( &prop, device );
-		printf("CUDA Device:                  %s\n", prop.name); 
+	printf("GPU Device:                 %s\n", prop.name); 
+#elif defined(RAJA_ENABLE_HIP)
+	hipDeviceProp_t prop;
+	int device;
+	hipGetDevice(&device);
+	hipGetDeviceProperties ( &prop, device );
+	printf("GPU Device:                   %s\n", prop.name);
+#endif
+
 	if( in.simulation_method == EVENT_BASED )
 		printf("Simulation Method:            Event Based\n");
 	else
@@ -231,7 +240,11 @@ Inputs read_CLI( int argc, char * argv[] )
 	input.simulation_method = HISTORY_BASED;
 	
 	// defaults to max threads on the system	
+#if defined(RAJA_ENABLE_OPENMP)
+	input.nthreads = omp_get_num_procs();
+#else
 	input.nthreads = 1;
+#endif
 	
 	// defaults to 355 (corresponding to H-M Large benchmark)
 	input.n_isotopes = 355;
