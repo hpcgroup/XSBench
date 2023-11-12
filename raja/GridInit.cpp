@@ -34,33 +34,33 @@ SimulationData move_simulation_data_to_device( Inputs in, int mype, SimulationDa
 
 	// Move data to GPU memory space
 	sz = GSD.length_num_nucs * sizeof(int);
-	gpuErrchk( cudaMalloc((void **) &GSD.num_nucs, sz) );
-	gpuErrchk( cudaMemcpy(GSD.num_nucs, SD.num_nucs, sz, cudaMemcpyHostToDevice) );
+    GSD.num_nucs = static_cast<int*>(allocator.allocate(sz));
+    rm.copy(GSD.num_nucs, SD.num_nucs);
 	total_sz += sz;
 
 	sz = GSD.length_concs * sizeof(double);
-	gpuErrchk( cudaMalloc((void **) &GSD.concs, sz) );
-	gpuErrchk( cudaMemcpy(GSD.concs, SD.concs, sz, cudaMemcpyHostToDevice) );
+    GSD.concs = static_cast<double*>(allocator.allocate(sz));
+    rm.copy(GSD.concs, SD.concs);
 	total_sz += sz;
 
 	sz = GSD.length_mats * sizeof(int);
-	gpuErrchk( cudaMalloc((void **) &GSD.mats, sz) );
-	gpuErrchk( cudaMemcpy(GSD.mats, SD.mats, sz, cudaMemcpyHostToDevice) );
+    GSD.mats = static_cast<int*>(allocator.allocate(sz));
+    rm.copy(GSD.mats, SD.mats);
 	total_sz += sz;
 	
 	sz = GSD.length_unionized_energy_array * sizeof(double);
-	gpuErrchk( cudaMalloc((void **) &GSD.unionized_energy_array, sz) );
-	gpuErrchk( cudaMemcpy(GSD.unionized_energy_array, SD.unionized_energy_array, sz, cudaMemcpyHostToDevice) );
+    GSD.unionized_energy_array = static_cast<double*>(allocator.allocate(sz));
+    rm.copy(GSD.unionized_energy_array, SD.unionized_energy_array);
 	total_sz += sz;
 
 	sz = GSD.length_index_grid * sizeof(int);
-	gpuErrchk( cudaMalloc((void **) &GSD.index_grid, sz) );
-	gpuErrchk( cudaMemcpy(GSD.index_grid, SD.index_grid, sz, cudaMemcpyHostToDevice) );
+    GSD.index_grid = static_cast<int*>(allocator.allocate(sz));
+    rm.copy(GSD.index_grid, SD.index_grid);
 	total_sz += sz;
 
 	sz = GSD.length_nuclide_grid * sizeof(NuclideGridPoint);
-	gpuErrchk( cudaMalloc((void **) &GSD.nuclide_grid, sz) );
-	gpuErrchk( cudaMemcpy(GSD.nuclide_grid, SD.nuclide_grid, sz, cudaMemcpyHostToDevice) );
+    GSD.nuclide_grid = static_cast<NuclideGridPoint*>(allocator.allocate(sz));
+    rm.copy(GSD.nuclide_grid, SD.nuclide_grid);
 	total_sz += sz;
 	
 	// Allocate verification array on device. This structure is not needed on CPU, so we don't
@@ -70,10 +70,6 @@ SimulationData move_simulation_data_to_device( Inputs in, int mype, SimulationDa
 	total_sz += sz;
 	GSD.length_verification = in.lookups;
 	
-	// Synchronize
-	gpuErrchk( cudaPeekAtLastError() );
-	gpuErrchk( cudaDeviceSynchronize() );
-	
 	if(mype == 0 ) printf("GPU Intialization complete. Allocated %.0lf MB of data on GPU.\n", total_sz/1024.0/1024.0 );
 
 	return GSD;
@@ -82,12 +78,15 @@ SimulationData move_simulation_data_to_device( Inputs in, int mype, SimulationDa
 
 // Release device memory
 void release_device_memory(SimulationData GSD) {
-	cudaFree(GSD.num_nucs);
-	cudaFree(GSD.concs);
-	cudaFree(GSD.mats);
-	cudaFree(GSD.unionized_energy_array);
-	cudaFree(GSD.nuclide_grid);
-	cudaFree(GSD.verification);
+    auto& rm = umpire::ResourceManager::getInstance();
+	umpire::Allocator allocator = rm.getAllocator("DEVICE");	
+
+	allocator.deallocate(GSD.num_nucs);
+	allocator.deallocate(GSD.concs);
+	allocator.deallocate(GSD.mats);
+	allocator.deallocate(GSD.unionized_energy_array);
+	allocator.deallocate(GSD.nuclide_grid);
+	allocator.deallocate(GSD.verification);
 }
 
 SimulationData grid_init_do_not_profile( Inputs in, int mype )
