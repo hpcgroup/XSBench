@@ -37,7 +37,52 @@ unsigned long long run_event_based_simulation_baseline(Inputs in, SimulationData
 	int nthreads = 256;
 	int nblocks = ceil( (double) in.lookups / (double) nthreads);
 
-	xs_lookup_kernel_baseline<<<nblocks, nthreads>>>( in, GSD );
+    RAJA::forall<policy>(RAJA::RangeSegment(0, in.lookups), [=] RAJA_HOST_DEVICE (int i) {
+            if (i < in.lookups) {
+            // Set the initial seed value
+            uint64_t seed = STARTING_SEED;	
+
+            // Forward seed to lookup index (we need 2 samples per lookup)
+            seed = fast_forward_LCG(seed, 2*i);
+
+            // Randomly pick an energy and material for the particle
+            double p_energy = LCG_random_double(&seed);
+            int mat         = pick_mat(&seed); 
+
+            double macro_xs_vector[5] = {0};
+
+            // Perform macroscopic Cross Section Lookup
+            calculate_macro_xs(
+                    p_energy,        // Sampled neutron energy (in lethargy)
+                    mat,             // Sampled material type index neutron is in
+                    in.n_isotopes,   // Total number of isotopes in simulation
+                    in.n_gridpoints, // Number of gridpoints per isotope in simulation
+                    GSD.num_nucs,     // 1-D array with number of nuclides per material
+                    GSD.concs,        // Flattened 2-D array with concentration of each nuclide in each material
+                    GSD.unionized_energy_array, // 1-D Unionized energy array
+                    GSD.index_grid,   // Flattened 2-D grid holding indices into nuclide grid for each unionized energy level
+                    GSD.nuclide_grid, // Flattened 2-D grid holding energy levels and XS_data for all nuclides in simulation
+                    GSD.mats,         // Flattened 2-D array with nuclide indices defining composition of each type of material
+                    macro_xs_vector, // 1-D array with result of the macroscopic cross section (5 different reaction channels)
+                    in.grid_type,    // Lookup type (nuclide, hash, or unionized)
+                    in.hash_bins,    // Number of hash bins used (if using hash lookup type)
+                    GSD.max_num_nucs  // Maximum number of nuclides present in any material
+                    );
+
+
+            double max = -1.0;
+            int max_idx = 0;
+            for(int j = 0; j < 5; j++ )
+            {
+                if( macro_xs_vector[j] > max )
+                {
+                    max = macro_xs_vector[j];
+                    max_idx = j;
+                }
+            }
+            GSD.verification[i] = max_idx+1;
+            }
+    });
 	
 	////////////////////////////////////////////////////////////////////////////////
 	// Reduce Verification Results
@@ -55,68 +100,8 @@ unsigned long long run_event_based_simulation_baseline(Inputs in, SimulationData
 	return verification_scalar;
 }
 
-// In this kernel, we perform a single lookup with each thread. Threads within a warp
-// do not really have any relation to each other, and divergence due to high nuclide count fuel
-// material lookups are costly. This kernel constitutes baseline performance.
-__global__ void xs_lookup_kernel_baseline(Inputs in, SimulationData GSD )
-{
-	// The lookup ID. Used to set the seed, and to store the verification value
-	const int i = blockIdx.x *blockDim.x + threadIdx.x;
-
-	if( i >= in.lookups )
-		return;
-
-	// Set the initial seed value
-	uint64_t seed = STARTING_SEED;	
-
-	// Forward seed to lookup index (we need 2 samples per lookup)
-	seed = fast_forward_LCG(seed, 2*i);
-
-	// Randomly pick an energy and material for the particle
-	double p_energy = LCG_random_double(&seed);
-	int mat         = pick_mat(&seed); 
-		
-	double macro_xs_vector[5] = {0};
-		
-	// Perform macroscopic Cross Section Lookup
-	calculate_macro_xs(
-			p_energy,        // Sampled neutron energy (in lethargy)
-			mat,             // Sampled material type index neutron is in
-			in.n_isotopes,   // Total number of isotopes in simulation
-			in.n_gridpoints, // Number of gridpoints per isotope in simulation
-			GSD.num_nucs,     // 1-D array with number of nuclides per material
-			GSD.concs,        // Flattened 2-D array with concentration of each nuclide in each material
-			GSD.unionized_energy_array, // 1-D Unionized energy array
-			GSD.index_grid,   // Flattened 2-D grid holding indices into nuclide grid for each unionized energy level
-			GSD.nuclide_grid, // Flattened 2-D grid holding energy levels and XS_data for all nuclides in simulation
-			GSD.mats,         // Flattened 2-D array with nuclide indices defining composition of each type of material
-			macro_xs_vector, // 1-D array with result of the macroscopic cross section (5 different reaction channels)
-			in.grid_type,    // Lookup type (nuclide, hash, or unionized)
-			in.hash_bins,    // Number of hash bins used (if using hash lookup type)
-			GSD.max_num_nucs  // Maximum number of nuclides present in any material
-			);
-
-	// For verification, and to prevent the compiler from optimizing
-	// all work out, we interrogate the returned macro_xs_vector array
-	// to find its maximum value index, then increment the verification
-	// value by that index. In this implementation, we have each thread
-	// write to its thread_id index in an array, which we will reduce
-	// with a thrust reduction kernel after the main simulation kernel.
-	double max = -1.0;
-	int max_idx = 0;
-	for(int j = 0; j < 5; j++ )
-	{
-		if( macro_xs_vector[j] > max )
-		{
-			max = macro_xs_vector[j];
-			max_idx = j;
-		}
-	}
-	GSD.verification[i] = max_idx+1;
-}
-
 // Calculates the microscopic cross section for a given nuclide & energy
-__device__ void calculate_micro_xs(   double p_energy, int nuc, long n_isotopes,
+RAJA_HOST_DEVICE void calculate_micro_xs(   double p_energy, int nuc, long n_isotopes,
                            long n_gridpoints,
                            double * __restrict__ egrid, int * __restrict__ index_data,
                            NuclideGridPoint * __restrict__ nuclide_grids,
@@ -201,7 +186,7 @@ __device__ void calculate_micro_xs(   double p_energy, int nuc, long n_isotopes,
 }
 
 // Calculates macroscopic cross section based on a given material & energy 
-__device__ void calculate_macro_xs( double p_energy, int mat, long n_isotopes,
+RAJA_HOST_DEVICE void calculate_macro_xs( double p_energy, int mat, long n_isotopes,
                          long n_gridpoints, int * __restrict__ num_nucs,
                          double * __restrict__ concs,
                          double * __restrict__ egrid, int * __restrict__ index_data,
@@ -255,7 +240,7 @@ __device__ void calculate_macro_xs( double p_energy, int mat, long n_isotopes,
 
 // binary search for energy on unionized energy grid
 // returns lower index
-__device__ long grid_search( long n, double quarry, double * __restrict__ A)
+RAJA_HOST_DEVICE long grid_search( long n, double quarry, double * __restrict__ A)
 {
 	long lowerLimit = 0;
 	long upperLimit = n-1;
@@ -278,7 +263,7 @@ __device__ long grid_search( long n, double quarry, double * __restrict__ A)
 }
 
 // binary search for energy on nuclide energy grid
-__host__ __device__ long grid_search_nuclide( long n, double quarry, NuclideGridPoint * A, long low, long high)
+__host__ RAJA_HOST_DEVICE long grid_search_nuclide( long n, double quarry, NuclideGridPoint * A, long low, long high)
 {
 	long lowerLimit = low;
 	long upperLimit = high;
@@ -301,7 +286,7 @@ __host__ __device__ long grid_search_nuclide( long n, double quarry, NuclideGrid
 }
 
 // picks a material based on a probabilistic distribution
-__device__ int pick_mat( uint64_t * seed )
+RAJA_HOST_DEVICE int pick_mat( uint64_t * seed )
 {
 	// I have a nice spreadsheet supporting these numbers. They are
 	// the fractions (by volume) of material in the core. Not a 
@@ -340,7 +325,7 @@ __device__ int pick_mat( uint64_t * seed )
 	return 0;
 }
 
-__host__ __device__ double LCG_random_double(uint64_t * seed)
+RAJA_HOST_DEVICE double LCG_random_double(uint64_t * seed)
 {
 	// LCG parameters
 	const uint64_t m = 9223372036854775808ULL; // 2^63
@@ -350,7 +335,7 @@ __host__ __device__ double LCG_random_double(uint64_t * seed)
 	return (double) (*seed) / (double) m;
 }	
 
-__device__ uint64_t fast_forward_LCG(uint64_t seed, uint64_t n)
+RAJA_HOST_DEVICE uint64_t fast_forward_LCG(uint64_t seed, uint64_t n)
 {
 	// LCG parameters
 	const uint64_t m = 9223372036854775808ULL; // 2^63

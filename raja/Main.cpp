@@ -83,6 +83,8 @@ int main( int argc, char* argv[] )
 	// Final Hash Step
 	verification = verification % 999983;
 
+    release_memory(SD);
+
 	// Print / Save Results and Exit
 	int is_invalid_result = print_results( in, mype, omp_end-omp_start, nprocs, verification );
 

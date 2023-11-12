@@ -101,29 +101,29 @@ SimulationData binary_read( Inputs in );
 
 // Simulation.cu
 unsigned long long run_event_based_simulation_baseline(Inputs in, SimulationData SD, int mype);
-__global__ void xs_lookup_kernel_baseline(Inputs in, SimulationData GSD );
-__device__ void calculate_micro_xs(   double p_energy, int nuc, long n_isotopes,
+RAJA_HOST_DEVICE void calculate_micro_xs(   double p_energy, int nuc, long n_isotopes,
                            long n_gridpoints,
                            double * __restrict__ egrid, int * __restrict__ index_data,
                            NuclideGridPoint * __restrict__ nuclide_grids,
                            long idx, double * __restrict__ xs_vector, int grid_type, int hash_bins );
-__device__ void calculate_macro_xs( double p_energy, int mat, long n_isotopes,
+RAJA_HOST_DEVICE void calculate_macro_xs( double p_energy, int mat, long n_isotopes,
                          long n_gridpoints, int * __restrict__ num_nucs,
                          double * __restrict__ concs,
                          double * __restrict__ egrid, int * __restrict__ index_data,
                          NuclideGridPoint * __restrict__ nuclide_grids,
                          int * __restrict__ mats,
                          double * __restrict__ macro_xs_vector, int grid_type, int hash_bins, int max_num_nucs );
-__device__ long grid_search( long n, double quarry, double * __restrict__ A);
-__host__ __device__ long grid_search_nuclide( long n, double quarry, NuclideGridPoint * A, long low, long high);
-__device__ int pick_mat( uint64_t * seed );
-__host__ __device__ double LCG_random_double(uint64_t * seed);
-__device__ uint64_t fast_forward_LCG(uint64_t seed, uint64_t n);
+RAJA_HOST_DEVICE long grid_search( long n, double quarry, double * __restrict__ A);
+RAJA_HOST_DEVICE long grid_search_nuclide( long n, double quarry, NuclideGridPoint * A, long low, long high);
+RAJA_HOST_DEVICE int pick_mat( uint64_t * seed );
+RAJA_HOST_DEVICE double LCG_random_double(uint64_t * seed);
+RAJA_HOST_DEVICE uint64_t fast_forward_LCG(uint64_t seed, uint64_t n);
 
 // GridInit.cu
 SimulationData grid_init_do_not_profile( Inputs in, int mype );
 SimulationData move_simulation_data_to_device( Inputs in, int mype, SimulationData SD );
 void release_device_memory(SimulationData GSD);
+void release_memory(SimulationData SD);
 
 // XSutils.cu
 int NGP_compare( const void * a, const void * b );
