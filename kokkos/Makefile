@@ -10,8 +10,10 @@ DEBUG       ?= no
 PROFILE     ?= no
 MPI         ?= no
 KOKKOS_DEVICES ?= OpenMP,Cuda
-KOKKOS_ARCH ?= Zen3,Ampere80
-SM_VERSION ?= 80
+KOKKOS_ARCH    ?= Zen3,Ampere80
+SM_VERSION  ?= 80
+NVTX        ?= no
+LINEINFO    ?= no
 
 #===============================================================================
 # Program name & source code list
@@ -55,7 +57,7 @@ endif
 ifeq ($(COMPILER),gnu)
   ifneq (,$(findstring Cuda,$(KOKKOS_DEVICES)))
     CXX = ${KOKKOS_PATH}/bin/nvcc_wrapper
-    CXXFLAGS += -ccbin g++ -Xcompiler -Wall -Xcompiler -O3 -arch=sm_$(SM_VERSION) -Xcompiler -fopenmp -DOPENMP
+    CXXFLAGS += -ccbin g++ -Xcompiler -Wall -Xcompiler -O3 -Xcompiler -fopenmp -DOPENMP
   else
     CXX = g++
     CXXFLAGS += -flto -fopenmp -DOPENMP
@@ -88,6 +90,21 @@ endif
 ifeq ($(MPI),yes)
   CXX = mpicxx
   CXXFLAGS += -DMPI
+endif
+
+# Enable lineinfo without disabling GPU optimizations
+ifeq ($(LINEINFO),yes)
+  CXXFLAGS += -g
+  LDFLAGS  += -g
+ifeq ($(COMPILER),nvidia)
+  CXXFLAGS += -lineinfo
+  LDFLAGS  += -lineinfo
+endif
+endif
+
+# Enable NVTX annotations
+ifeq ($(NVTX),yes)
+	CXXFLAGS += -DUSE_NVTX
 endif
 
 #===============================================================================

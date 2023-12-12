@@ -16,6 +16,10 @@
 
 #include <Kokkos_Core.hpp>
 
+#ifdef USE_NVTX
+#include <nvtx3/nvToolsExt.h>
+#endif
+
 // Papi Header
 #ifdef PAPI
 #include "papi.h"

@@ -38,8 +38,11 @@ unsigned long long run_event_based_simulation(Inputs in, SimulationData SD, int 
 	// Data movment and setup
 	int length_max_num_nucs = 1;
 
-    Kokkos::Timer start;
-    start.reset();
+	Kokkos::Timer start;
+	start.reset();
+#ifdef USE_NVTX
+	nvtxRangePushA("XSBenchCore");
+#endif
 
 	UIntView u_max_num_nucs(&SD.max_num_nucs, 1);
         SD.d_max_num_nucs = new IntView("d_max_num_nucs", length_max_num_nucs);
@@ -147,6 +150,9 @@ unsigned long long run_event_based_simulation(Inputs in, SimulationData SD, int 
 	Kokkos::deep_copy(verification, d_verification);
 	Kokkos::fence();
 
+#ifdef USE_NVTX
+	nvtxRangePop();
+#endif
 	// End Simulation Timer
 	*end = start.seconds();
 
