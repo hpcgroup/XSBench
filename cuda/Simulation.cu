@@ -34,6 +34,10 @@ unsigned long long run_event_based_simulation_baseline(Inputs in, SimulationData
 #ifdef ALIGNED_WORK
 	*end = get_time();
 #endif
+#ifdef USE_NVTX
+	nvtxRangePop();
+#endif
+
 
 	////////////////////////////////////////////////////////////////////////////////
 	// Reduce Verification Results

@@ -8,6 +8,8 @@ DEBUG       ?= no
 PROFILE     ?= no
 SM_VERSION  ?= 80
 ALIGNED     ?= yes
+NVTX        ?= no
+LINEINFO    ?= no
 
 #===============================================================================
 # Program name & source code list
@@ -61,6 +63,17 @@ endif
 # Align workload to match other implementations
 ifeq ($(ALIGNED),yes)
   CFLAGS += -DALIGNED_WORK
+endif
+
+# Enable NVTX annotations
+ifeq ($(NVTX),yes)
+	CFLAGS += -DUSE_NVTX
+endif
+
+# Enable lineinfo without removing GPU optimizations
+ifeq ($(LINEINFO),yes)
+  CFLAGS += -g -lineinfo
+  LDFLAGS  += -g -lineinfo
 endif
 
 #===============================================================================

@@ -11,6 +11,9 @@
 #include <thrust/partition.h>
 #include<stdint.h>
 #include <chrono>
+#ifdef USE_NVTX
+#include <nvtx3/nvToolsExt.h>
+#endif
 
 // Grid types
 #define UNIONIZED 0

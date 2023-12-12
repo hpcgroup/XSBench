@@ -42,6 +42,9 @@ int main( int argc, char* argv[] )
 #ifdef ALIGNED_WORK
 	omp_start = get_time();
 #endif
+#ifdef USE_NVTX
+	nvtxRangePushA("XSBenchCore");
+#endif
 
 	// Move data to GPU
 	SimulationData GSD = move_simulation_data_to_device( in, mype, SD );
@@ -104,7 +107,6 @@ int main( int argc, char* argv[] )
 #ifndef ALIGNED_WORK
 	omp_end = get_time();
 #endif
-
 	// Release device memory
 	release_device_memory(GSD);
 
