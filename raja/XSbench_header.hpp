@@ -1,3 +1,4 @@
+// -*- c-basic-offset: 8; tab-width: 8; indent-tabs-mode: t; -*-
 #ifndef __XSBENCH_HEADER_H__
 #define __XSBENCH_HEADER_H__
 
@@ -23,6 +24,10 @@
 
 #ifdef OPENMP
 #include<omp.h>
+#endif
+
+#ifdef USE_NVTX
+#include <nvtx3/nvToolsExt.h>
 #endif
 
 // Papi Header

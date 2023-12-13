@@ -1,3 +1,4 @@
+// -*- c-basic-offset: 8; tab-width: 8; indent-tabs-mode: t; -*-
 #include "XSbench_header.hpp"
 
 ////////////////////////////////////////////////////////////////////////////////////
@@ -21,9 +22,9 @@ using policy = RAJA::cuda_exec<256>;
 
 unsigned long long run_event_based_simulation(Inputs in, SimulationData SD, int mype, double* end)
 {
-	if( mype == 0)	
+	if( mype == 0)
 		printf("Beginning event based simulation...\n");
-	
+
 	auto& rm = umpire::ResourceManager::getInstance();
 	const std::string destination = "DEVICE";
 	auto d_allocator = rm.getAllocator(destination);
@@ -41,7 +42,7 @@ unsigned long long run_event_based_simulation(Inputs in, SimulationData SD, int 
 	// double * unionized_energy_array;    // Length = length_unionized_energy_array
 	// int * index_grid;                   // Length = length_index_grid
 	// NuclideGridPoint * nuclide_grid;    // Length = length_nuclide_grid
-	// 
+	//
 	// Note: "unionized_energy_array" and "index_grid" can be of zero length
 	//        depending on lookup method.
 	//
@@ -51,12 +52,12 @@ unsigned long long run_event_based_simulation(Inputs in, SimulationData SD, int 
 
 
 	////////////////////////////////////////////////////////////////////////////////
-	// Begin Actual Simulation Loop 
+	// Begin Actual Simulation Loop
 	////////////////////////////////////////////////////////////////////////////////
 	int* verifications = static_cast<int*>(allocator.allocate(in.lookups * sizeof(int)));
 	int* d_verifications = static_cast<int*>(d_allocator.allocate(in.lookups * sizeof(int)));
 	int i = 0;
-	
+
 	printf("Requesting %d mem\n", SD.length_num_nucs * sizeof(int));
 	int* num_nucs = static_cast<int*>(d_allocator.allocate(SD.length_num_nucs * sizeof(int)));
 	rm.copy(num_nucs, SD.num_nucs);
@@ -83,14 +84,14 @@ unsigned long long run_event_based_simulation(Inputs in, SimulationData SD, int 
 
   	RAJA::forall<policy>(RAJA::TypedRangeSegment<int>(0, in.lookups), [=] RAJA_DEVICE (int i) {
 		// Set the initial seed value
-		uint64_t seed = STARTING_SEED;	
+		uint64_t seed = STARTING_SEED;
 
 		// Forward seed to lookup index (we need 2 samples per lookup)
 		seed = fast_forward_LCG(seed, 2*i);
 
 		// Randomly pick an energy and material for the particle
 		double p_energy = LCG_random_double(&seed);
-		int mat         = pick_mat(&seed); 
+		int mat         = pick_mat(&seed);
 
 		double macro_xs_vector[5] = {0};
 
@@ -132,12 +133,15 @@ unsigned long long run_event_based_simulation(Inputs in, SimulationData SD, int 
 		}
     	d_verifications[i] = max_idx + 1;
   	});
-	
+
 	// cudaDeviceSynchronize();
 	// Copy back the verifications and do a sum to get the verification hash
 	rm.copy(verifications, d_verifications);
+#ifdef USE_NVTX
+	nvtxRangePop();
+#endif
 #ifdef ALIGNED_WORK
-    *end = get_time();
+	*end = get_time();
 #endif
 
 	unsigned long long verification_hash = 0;
@@ -149,10 +153,10 @@ unsigned long long run_event_based_simulation(Inputs in, SimulationData SD, int 
 
 unsigned long long run_history_based_simulation(Inputs in, SimulationData SD, int mype)
 {
-	if( mype == 0)	
+	if( mype == 0)
 		printf("Beginning history based simulation...\n");
 
-	
+
 	////////////////////////////////////////////////////////////////////////////////
 	// SUMMARY: Simulation Data Structure Manifest for "SD" Object
 	// Here we list all heap arrays (and lengths) in SD that would need to be
@@ -164,7 +168,7 @@ unsigned long long run_history_based_simulation(Inputs in, SimulationData SD, in
 	// double * unionized_energy_array;    // Length = length_unionized_energy_array
 	// int * index_grid;                   // Length = length_index_grid
 	// NuclideGridPoint * nuclide_grid;    // Length = length_nuclide_grid
-	// 
+	//
 	// Note: "unionized_energy_array" and "index_grid" can be of zero length
 	//        depending on lookup method.
 	//
@@ -194,7 +198,7 @@ unsigned long long run_history_based_simulation(Inputs in, SimulationData SD, in
 		#endif
 
 		// Set the initial seed value
-		uint64_t seed = STARTING_SEED;	
+		uint64_t seed = STARTING_SEED;
 
 		// Forward seed to lookup index (we need 2 samples per lookup, and
 		// we may fast forward up to 5 times after each lookup)
@@ -202,7 +206,7 @@ unsigned long long run_history_based_simulation(Inputs in, SimulationData SD, in
 
 		// Randomly pick an energy and material for the particle
 		double p_energy = LCG_random_double(&seed);
-		int mat         = pick_mat(&seed); 
+		int mat         = pick_mat(&seed);
 
 		// Inner XS Lookup Loop
 		// This loop is dependent!
@@ -229,7 +233,7 @@ unsigned long long run_history_based_simulation(Inputs in, SimulationData SD, in
 					SD.max_num_nucs  // Maximum number of nuclides present in any material
 					);
 
-		
+
 			// For verification, and to prevent the compiler from optimizing
 			// all work out, we interrogate the returned macro_xs_vector array
 			// to find its maximum value index, then increment the verification
@@ -264,7 +268,7 @@ unsigned long long run_history_based_simulation(Inputs in, SimulationData SD, in
 				seed = fast_forward_LCG(seed, n_forward);
 
 			p_energy = LCG_random_double(&seed);
-			mat      = pick_mat(&seed); 
+			mat      = pick_mat(&seed);
 		}
 
 	}
@@ -334,29 +338,29 @@ RAJA_HOST_DEVICE void calculate_micro_xs(   double p_energy, int nuc, long n_iso
 		else
 			low = &nuclide_grids[nuc*n_gridpoints + lower];
 	}
-	
+
 	high = low + 1;
-	
+
 	// calculate the re-useable interpolation factor
 	f = (high->energy - p_energy) / (high->energy - low->energy);
 
 	// Total XS
 	xs_vector[0] = high->total_xs - f * (high->total_xs - low->total_xs);
-	
+
 	// Elastic XS
 	xs_vector[1] = high->elastic_xs - f * (high->elastic_xs - low->elastic_xs);
-	
+
 	// Absorbtion XS
 	xs_vector[2] = high->absorbtion_xs - f * (high->absorbtion_xs - low->absorbtion_xs);
-	
+
 	// Fission XS
 	xs_vector[3] = high->fission_xs - f * (high->fission_xs - low->fission_xs);
-	
+
 	// Nu Fission XS
 	xs_vector[4] = high->nu_fission_xs - f * (high->nu_fission_xs - low->nu_fission_xs);
 }
 
-// Calculates macroscopic cross section based on a given material & energy 
+// Calculates macroscopic cross section based on a given material & energy
 RAJA_HOST_DEVICE void calculate_macro_xs( double p_energy, int mat, long n_isotopes,
                                           long n_gridpoints, int * __restrict num_nucs,
                                           double * __restrict concs,
@@ -366,7 +370,7 @@ RAJA_HOST_DEVICE void calculate_macro_xs( double p_energy, int mat, long n_isoto
                                           double * __restrict macro_xs_vector, int grid_type,
                                           int hash_bins, int max_num_nucs ){
 	int p_nuc; // the nuclide we are looking up
-	long idx = -1;	
+	long idx = -1;
 	double conc; // the concentration of the nuclide in the material
 
 	// cleans out macro_xs_vector
@@ -379,13 +383,13 @@ RAJA_HOST_DEVICE void calculate_macro_xs( double p_energy, int mat, long n_isoto
 	// done inside of the "calculate_micro_xs" function for each different
 	// nuclide in the material.
 	if( grid_type == UNIONIZED )
-		idx = grid_search( n_isotopes * n_gridpoints, p_energy, egrid);	
+		idx = grid_search( n_isotopes * n_gridpoints, p_energy, egrid);
 	else if( grid_type == HASH )
 	{
 		double du = 1.0 / hash_bins;
 		idx = p_energy / du;
 	}
-	
+
 	// Once we find the pointer array on the UEG, we can pull the data
 	// from the respective nuclide grids, as well as the nuclide
 	// concentration data for the material
@@ -422,15 +426,15 @@ RAJA_HOST_DEVICE long grid_search( long n, double quarry, double * __restrict A)
 	while( length > 1 )
 	{
 		examinationPoint = lowerLimit + ( length / 2 );
-		
+
 		if( A[examinationPoint] > quarry )
 			upperLimit = examinationPoint;
 		else
 			lowerLimit = examinationPoint;
-		
+
 		length = upperLimit - lowerLimit;
 	}
-	
+
 	return lowerLimit;
 }
 
@@ -445,15 +449,15 @@ RAJA_HOST_DEVICE long grid_search_nuclide( long n, double quarry, NuclideGridPoi
 	while( length > 1 )
 	{
 		examinationPoint = lowerLimit + ( length / 2 );
-		
+
 		if( A[examinationPoint].energy > quarry )
 			upperLimit = examinationPoint;
 		else
 			lowerLimit = examinationPoint;
-		
+
 		length = upperLimit - lowerLimit;
 	}
-	
+
 	return lowerLimit;
 }
 
@@ -461,7 +465,7 @@ RAJA_HOST_DEVICE long grid_search_nuclide( long n, double quarry, NuclideGridPoi
 RAJA_HOST_DEVICE int pick_mat( uint64_t * seed )
 {
 	// I have a nice spreadsheet supporting these numbers. They are
-	// the fractions (by volume) of material in the core. Not a 
+	// the fractions (by volume) of material in the core. Not a
 	// *perfect* approximation of where XS lookups are going to occur,
 	// but this will do a good job of biasing the system nonetheless.
 
@@ -478,7 +482,7 @@ RAJA_HOST_DEVICE int pick_mat( uint64_t * seed )
 	dist[9]  = 0.015;	// top nozzle
 	dist[10] = 0.025;	// top of fuel assemblies
 	dist[11] = 0.013;	// bottom of fuel assemblies
-	
+
 	double roll = LCG_random_double(seed);
 
 	// makes a pick based on the distro
@@ -502,7 +506,7 @@ RAJA_HOST_DEVICE double LCG_random_double(uint64_t * seed)
 	const uint64_t c = 1ULL;
 	*seed = (a * (*seed) + c) % m;
 	return (double) (*seed) / (double) m;
-}	
+}
 
 RAJA_HOST_DEVICE uint64_t fast_forward_LCG(uint64_t seed, uint64_t n)
 {
@@ -516,7 +520,7 @@ RAJA_HOST_DEVICE uint64_t fast_forward_LCG(uint64_t seed, uint64_t n)
 	uint64_t a_new = 1;
 	uint64_t c_new = 0;
 
-	while(n > 0) 
+	while(n > 0)
 	{
 		if(n & 1)
 		{
@@ -576,7 +580,7 @@ RAJA_HOST_DEVICE uint64_t fast_forward_LCG(uint64_t seed, uint64_t n)
 //
 // The MIT License (MIT)
 //
-// Copyright (c) 2016 Eduard López
+// Copyright (c) 2016 Eduard Lopez
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal

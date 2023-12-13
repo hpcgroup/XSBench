@@ -24,10 +24,12 @@ OPTIMIZE    ?= yes
 DEBUG       ?= no
 PROFILE     ?= no
 MPI         ?= no
-RAJA_DEVICES ?= Cuda#OpenMP#,Cuda
-RAJA_ARCH ?= Power9# Zen3,Ampere80
-SM_VERSION ?= 70
-ALIGNED ?= yes
+RAJA_DEVICES ?= Cuda #OpenMP#,Cuda
+RAJA_ARCH    ?= Power9 # Zen3,Ampere80
+SM_VERSION  ?= 70
+ALIGNED     ?= yes
+NVTX        ?= no
+LINEINFO    ?= no
 
 #===============================================================================
 # Program name & source code list
@@ -65,7 +67,7 @@ endif
 ifeq ($(COMPILER),nvidia)
   #CXX = ${RAJA_PATH}/bin/nvcc_wrapper
   #CXXFLAGS += -ccbin nvc++ -Xcompiler -Wall -Xcompiler -O3 -arch=sm_$(SM_VERSION)
-  CXX = nvcc#RAJA_PATH}/bin/nvcc_wrapper
+  CXX = nvcc #RAJA_PATH}/bin/nvcc_wrapper
   CXXFLAGS +=  -forward-unknown-to-host-compiler -ccbin=${CPP_BIN} -x cu -Xcompiler -O3 --extended-lambda -arch=sm_$(SM_VERSION) -DTHRUST_IGNORE_CUB_VERSION_CHECK -DCUDA_EXEC
 
   # CXXFLAGS +=  -forward-unknown-to-host-compiler -ccbin=/usr/tce/packages/gcc/gcc-8.3.1/bin/c++ -Xcompiler=-fPIE -std=c++14 -x cu -O3 --extended-lambda -arch=sm_$(SM_VERSION) 
@@ -80,7 +82,7 @@ endif
 # GCC Compiler
 ifeq ($(COMPILER),gnu)
   ifneq (,$(findstring Cuda,$(RAJA_DEVICES)))
-    CXX = nvcc#RAJA_PATH}/bin/nvcc_wrapper
+    CXX = nvcc #RAJA_PATH}/bin/nvcc_wrapper
     CXXFLAGS += -arch=sm_$(SM_VERSION) 
   else
     CXX = g++
@@ -96,6 +98,16 @@ ifeq ($(DEBUG),yes)
 ifeq ($(COMPILER),nvidia)
   CXXFLAGS += -G
   LDFLAGS  += -G
+endif
+endif
+
+# Add lineinfo without disabling GPU optimizations
+ifeq ($(DEBUG),yes)
+  CXXFLAGS += -g
+  LDFLAGS  += -g
+ifeq ($(COMPILER),nvidia)
+  CXXFLAGS += -lineinfo
+  LDFLAGS  += -lineinfo
 endif
 endif
 
@@ -120,6 +132,10 @@ ifeq ($(ALIGNED),yes)
   CFLAGS += -DALIGNED_WORK
 endif
 
+ifeq ($(NVTX),yes)
+  CFLAGS += -DUSE_NVTX
+endif
+
 #===============================================================================
 # Targets to Build
 #===============================================================================
@@ -138,7 +154,7 @@ Umpire_CXXFLAGS = -I./ -I$(Umpire_INCLUDE_DIR) -I$(camp_INCLUDE_DIR)
 CUDA_LDFLAGS = -L$(CUDA_PATH)/lib
 CUDA_CXXFLAGS = -I./ -I$(CUDA_PATH)/include
 
-$(program): $(obj) XSbench_header.hpp Makefile 
+$(program): $(obj) XSbench_header.hpp Makefile
 	$(CXX) $(RAJA_LDFLAGS) $(Umpire_LDFLAGS) $(CUDA_LDFLAGS) $(obj) $(RAJA_LIBS) $(Umpire_LIBS) $(CXXFLAGS) -o $@ $(LDFLAGS)
 
 %.o: %.cpp XSbench_header.hpp Makefile $(RAJA_CPP_DEPENDS)
