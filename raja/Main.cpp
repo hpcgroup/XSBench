@@ -1,8 +1,4 @@
-#include "XSbench_header.hpp"
-
-#ifdef MPI
-#include<mpi.h>
-#endif
+#include "XSbench_header.h"
 
 int main( int argc, char* argv[] )
 {
@@ -15,23 +11,8 @@ int main( int argc, char* argv[] )
 	int nprocs = 1;
 	unsigned long long verification;
 
-	#ifdef MPI
-	MPI_Init(&argc, &argv);
-	MPI_Comm_size(MPI_COMM_WORLD, &nprocs);
-	MPI_Comm_rank(MPI_COMM_WORLD, &mype);
-	#endif
-
-	#ifdef AML
-	aml_init(&argc, &argv);
-	#endif
-
 	// Process CLI Fields -- store in "Inputs" structure
 	Inputs in = read_CLI( argc, argv );
-
-	// Set number of OpenMP Threads
-	#ifdef OPENMP
-	omp_set_num_threads(in.nthreads); 
-	#endif
 
 	// Print-out of Input Summary
 	if( mype == 0 )
@@ -57,14 +38,12 @@ int main( int argc, char* argv[] )
 	if( in.binary_mode == WRITE && mype == 0 )
 		binary_write(in, SD);
 
-
 	// =====================================================================
 	// Cross Section (XS) Parallel Lookup Simulation
 	// This is the section that should be profiled, as it reflects a 
 	// realistic continuous energy Monte Carlo macroscopic cross section
 	// lookup kernel.
 	// =====================================================================
-
 	if( mype == 0 )
 	{
 		printf("\n");
@@ -80,17 +59,17 @@ int main( int argc, char* argv[] )
 	if( in.simulation_method == EVENT_BASED )
 	{
 		if( in.kernel_id == 0 )
-			verification = run_event_based_simulation(in, SD, mype, &omp_end);
-		else if( in.kernel_id == 1 )
-			verification = run_event_based_simulation_optimization_1(in, SD, mype);
-		else
-		{
+			verification = run_event_based_simulation_baseline(in, SD, mype);
+		else {
 			printf("Error: No kernel ID %d found!\n", in.kernel_id);
 			exit(1);
 		}
 	}
 	else
-		verification = run_history_based_simulation(in, SD, mype);
+	{
+		printf("History-based simulation not implemented in CUDA code. Instead,\nuse the event-based method with \"-m event\" argument.\n");
+		exit(1);
+	}
 
 	if( mype == 0)	
 	{	
@@ -99,26 +78,15 @@ int main( int argc, char* argv[] )
 	}
 
 	// End Simulation Timer
-#ifndef ALIGNED_WORK
 	omp_end = get_time();
-#endif
-	// =====================================================================
-	// Output Results & Finalize
-	// =====================================================================
 
 	// Final Hash Step
 	verification = verification % 999983;
 
+    release_memory(SD);
+
 	// Print / Save Results and Exit
 	int is_invalid_result = print_results( in, mype, omp_end-omp_start, nprocs, verification );
-
-	#ifdef MPI
-	MPI_Finalize();
-	#endif
-
-	#ifdef AML
-	aml_finalize();
-	#endif
 
 	return is_invalid_result;
 }

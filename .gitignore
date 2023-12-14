@@ -6,3 +6,10 @@ kokkos/desul
 *.a
 XSBench
 */XSBench
+*.cpp1*
+*.cpp4*
+*.ptx
+*.cubin
+*.cudafe1*
+*.fatbin*
+*.module_id
