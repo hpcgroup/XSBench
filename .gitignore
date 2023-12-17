@@ -1,4 +1,10 @@
 *.o
+*~
+*.tmp
+KokkosCore_*
+kokkos/desul
+*.a
+XSBench
 */XSBench
 *.cpp1*
 *.cpp4*
