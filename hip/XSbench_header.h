@@ -97,7 +97,7 @@ void binary_write( Inputs in, SimulationData SD );
 SimulationData binary_read( Inputs in );
 
 // Simulation.cu
-unsigned long long run_event_based_simulation_baseline(Inputs in, SimulationData SD, int mype, double* end);
+unsigned long long run_event_based_simulation_baseline(Inputs in, SimulationData SD, int mype);
 __global__ void xs_lookup_kernel_baseline(Inputs in, SimulationData GSD );
 __device__ void calculate_micro_xs(   double p_energy, int nuc, long n_isotopes,
                            long n_gridpoints,
