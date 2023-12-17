@@ -2,11 +2,12 @@
 # User Options
 #===============================================================================
 
-COMPILER    ?= llvm
+COMPILER    ?= pgi
 OPTIMIZE    ?= yes
-DEBUG       ?= no
+DEBUG       ?= yes
 PROFILE     ?= no
 MPI         ?= no
+OPENACC     ?= yes
 ALIGNED     ?= yes
 CUDA_ARCH   ?= 80
 
@@ -36,40 +37,34 @@ CFLAGS := -std=gnu99 -Wall
 # Linker Flags
 LDFLAGS = -lm
 
-# Regular gcc Compiler
+# PGI Compiler
+ifeq ($(COMPILER),pgi)
+  CC = pgcc
+  CFLAGS = -c99 -Minform=warn -mp -Minfo=mp
+  ifeq ($(OPTIMIZE),yes)
+    CFLAGS += -fast
+  endif
+  ifeq ($(VEC_INFO),yes)
+    CFLAGS += -Minfo=vect
+  endif
+  # OpenACC (assumes NVIDA GPU)
+  ifeq ($(OPENACC),yes)
+    CFLAGS += -acc -Minfo=accel -gpu=cc$(CUDA_ARCH)
+  endif
+endif
+
+# GNU Compiler
 ifeq ($(COMPILER),gnu)
   CC = gcc
-  CFLAGS += -fopenmp -flto
-endif
-
-# Intel Compiler
-ifeq ($(COMPILER),intel)
-  CC = icx
-  CFLAGS += -fiopenmp -fopenmp-targets=spir64 -D__STRICT_ANSI__
-endif
-
-# LLVM Compiler Targeting A100 -- Change SM Level to Target Other GPUs
-ifeq ($(COMPILER),llvm)
-  CC = clang
-  CFLAGS += -fopenmp -fopenmp-targets=nvptx64-nvidia-cuda -Xopenmp-target -march=sm_$(CUDA_ARCH)
-endif
-
-# IBM XL Compiler
-ifeq ($(COMPILER),ibm)
-  CC = xlc_r
-  CFLAGS += -qsmp=omp -qoffload
-endif
-
-# NVIDIA Compiler Targeting A100 -- Change SM Level to Target Other GPUs
-ifeq ($(COMPILER),nvidia)
-  CC = nvc
-  CFLAGS += -mp=gpu -Minfo=mp -gpu=cc$(CUDA_ARCH)
-endif
-
-# AOMP Targeting MI100 -- Change march to Target Other GPUs
-ifeq ($(COMPILER),amd)
-  CC = clang
-  CFLAGS += -fopenmp -fopenmp-targets=amdgcn-amd-amdhsa -Xopenmp-target=amdgcn-amd-amdhsa -march=gfx908
+  CFLAGS += -std=gnu99 -Wall -fopenmp
+  # Optimization
+  ifeq ($(OPTIMIZE),yes)
+    CFLAGS += -O3
+    # Compiler Vectorization (needs -O3 flag) information
+    ifeq ($(VEC_INFO),yes)
+      CFLAGS += -ftree-vectorizer-verbose=6
+    endif
+  endif
 endif
 
 # Debug Flags
@@ -89,9 +84,9 @@ ifeq ($(OPTIMIZE),yes)
   CFLAGS += -O3
 endif
 
-# Workload alignment for accurate comparison
+# Align workload for comparison purposes
 ifeq ($(ALIGNED),yes)
-	CFLAGS += -DALIGNED_WORK
+  CFLAGS += -DALIGNED_WORK
 endif
 
 # MPI

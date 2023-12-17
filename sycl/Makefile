@@ -2,7 +2,7 @@
 # User Options
 #===============================================================================
 
-CC          ?= llvm
+COMPILER    ?= llvm
 OPTIMIZE    ?= yes
 DEBUG       ?= no
 PROFILE     ?= no
@@ -38,20 +38,20 @@ CFLAGS := -std=c++17 -Wall
 LDFLAGS = -lm
 
 # Codeplay Compiler
-ifeq ($(CC),codeplay)
+ifeq ($(COMPILER),codeplay)
   CC = compute++
   CFLAGS += -sycl -sycl-driver
   LDFLAGS += -lComputeCpp
 endif
 
 # LLVM Compiler
-ifeq ($(CC),llvm)
+ifeq ($(COMPILER),llvm)
   CC = clang++
   CFLAGS += -fsycl
 endif
 
 # IntelOneAPI Compiler
-ifeq ($(CC),oneapi)
+ifeq ($(COMPILER),oneapi)
   CC = icpx
   CFLAGS += -fsycl
 endif
@@ -96,10 +96,19 @@ ifeq ($(OPTIMIZE),yes)
   CFLAGS += -O3
 endif
 
+# Disable or enable checking SYCL max mem alloc
+ifeq ($(CHECK_MAX),yes)
+	CFLAGS += -DCHECK_MAX_ALLOC
+endif
+
 # MPI
 ifeq ($(MPI),yes)
   CC = mpicc
   CFLAGS += -DMPI
+endif
+
+ifeq ($(ALIGNED),yes)
+  CFLAGS += -DALIGNED_WORK
 endif
 
 #===============================================================================
