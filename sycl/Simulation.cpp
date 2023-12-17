@@ -146,10 +146,6 @@ unsigned long long run_event_based_simulation(Inputs in, SimulationData SD, int 
 
     verification_d.get_host_access();
 
-#ifdef ALIGNED_WORK
-	*stop = get_time();
-#endif
-
 	// Host reduces the verification array
 	unsigned long long verification_scalar = 0;
 	for( int i = 0; i < in.lookups; i++ )
