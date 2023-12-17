@@ -1,3 +1,4 @@
+// -*- c-basic-offset: 8; tab-width: 8; indent-tabs-mode: t; -*-
 #include "XSbench_header.cuh"
 
 int main( int argc, char* argv[] )
@@ -23,7 +24,7 @@ int main( int argc, char* argv[] )
 	// This is not reflective of a real Monte Carlo simulation workload,
 	// therefore, do not profile this region!
 	// =====================================================================
-	
+
 	SimulationData SD;
 
 	// If read from file mode is selected, skip initialization and load
@@ -41,7 +42,7 @@ int main( int argc, char* argv[] )
 
 	// =====================================================================
 	// Cross Section (XS) Parallel Lookup Simulation
-	// This is the section that should be profiled, as it reflects a 
+	// This is the section that should be profiled, as it reflects a
 	// realistic continuous energy Monte Carlo macroscopic cross section
 	// lookup kernel.
 	// =====================================================================
@@ -54,7 +55,9 @@ int main( int argc, char* argv[] )
 	}
 
 	// Start Simulation Timer
+#ifndef ALIGNED_WORK
 	omp_start = get_time();
+#endif
 
 	// Run simulation
 	if( in.simulation_method == EVENT_BASED )
@@ -85,14 +88,16 @@ int main( int argc, char* argv[] )
 		exit(1);
 	}
 
-	if( mype == 0)	
-	{	
+	if( mype == 0)
+	{
 		printf("\n" );
 		printf("Simulation complete.\n" );
 	}
 
 	// End Simulation Timer
+#ifndef ALIGNED_WORK
 	omp_end = get_time();
+#endif
 
 	// Release device memory
 	release_memory(SD);
