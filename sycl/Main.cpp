@@ -1,3 +1,4 @@
+// -*- c-basic-offset: 8; tab-width: 8; indent-tabs-mode: t; -*-
 #include "XSbench_header.h"
 
 #ifdef MPI
@@ -26,7 +27,7 @@ int main( int argc, char* argv[] )
 	Inputs in = read_CLI( argc, argv );
 
 	// Set number of OpenMP Threads
-	//omp_set_num_threads(in.nthreads); 
+	//omp_set_num_threads(in.nthreads);
 
 	// Print-out of Input Summary
 	if( mype == 0 )
@@ -37,7 +38,7 @@ int main( int argc, char* argv[] )
 	// This is not reflective of a real Monte Carlo simulation workload,
 	// therefore, do not profile this region!
 	// =====================================================================
-	
+
 	SimulationData SD;
 
 	// If read from file mode is selected, skip initialization and load
@@ -55,7 +56,7 @@ int main( int argc, char* argv[] )
 
 	// =====================================================================
 	// Cross Section (XS) Parallel Lookup Simulation
-	// This is the section that should be profiled, as it reflects a 
+	// This is the section that should be profiled, as it reflects a
 	// realistic continuous energy Monte Carlo macroscopic cross section
 	// lookup kernel.
 	// =====================================================================
@@ -77,7 +78,7 @@ int main( int argc, char* argv[] )
 	{
 		if( in.kernel_id == 0 )
 		{
-			verification = run_event_based_simulation(in, SD, mype, &kernel_init_time);
+			verification = run_event_based_simulation(in, SD, mype, &kernel_init_time, &omp_end);
 		}
 		else
 		{
@@ -91,15 +92,16 @@ int main( int argc, char* argv[] )
 		exit(1);
 	}
 
-	if( mype == 0)	
-	{	
+	if( mype == 0)
+	{
 		printf("\n" );
 		printf("Simulation complete.\n" );
 	}
 
 	// End Simulation Timer
+#ifndef ALIGNED_WORK
 	omp_end = get_time();
-
+#endif
 	// =====================================================================
 	// Output Results & Finalize
 	// =====================================================================

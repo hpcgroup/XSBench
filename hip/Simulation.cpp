@@ -1,3 +1,4 @@
+// -*- c-basic-offset: 8; tab-width: 8; indent-tabs-mode: t; -*-
 #include "hip/hip_runtime.h"
 #include "XSbench_header.h"
 
@@ -30,7 +31,15 @@ unsigned long long run_event_based_simulation_baseline(Inputs in, SimulationData
 	hipLaunchKernelGGL(xs_lookup_kernel_baseline, dim3(nblocks), dim3(nthreads), 0, 0,  in, GSD );
 	gpuErrchk( hipPeekAtLastError() );
 	gpuErrchk( hipDeviceSynchronize() );
-	
+
+	size_t sz = in.lookups * sizeof(unsigned long);
+	unsigned long * v = (unsigned long *) malloc(sz);
+	gpuErrchk( hipMemcpy(v, GSD.verification, sz, hipMemcpyDeviceToHost) );
+
+#ifdef ALIGNED_WORK
+	*end = get_time();
+#endif
+
 	////////////////////////////////////////////////////////////////////////////////
 	// Reduce Verification Results
 	////////////////////////////////////////////////////////////////////////////////
