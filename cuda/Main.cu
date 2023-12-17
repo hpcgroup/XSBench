@@ -55,9 +55,7 @@ int main( int argc, char* argv[] )
 	}
 
 	// Start Simulation Timer
-#ifndef ALIGNED_WORK
 	omp_start = get_time();
-#endif
 
 	// Run simulation
 	if( in.simulation_method == EVENT_BASED )
@@ -95,9 +93,7 @@ int main( int argc, char* argv[] )
 	}
 
 	// End Simulation Timer
-#ifndef ALIGNED_WORK
 	omp_end = get_time();
-#endif
 
 	// Release device memory
 	release_memory(SD);
