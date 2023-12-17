@@ -31,10 +31,6 @@ unsigned long long run_event_based_simulation_baseline(Inputs in, SimulationData
 	unsigned long * v = (unsigned long *) malloc(sz);
 	gpuErrchk( cudaMemcpy(v, GSD.verification, sz, cudaMemcpyDeviceToHost) );
 
-#ifdef ALIGNED_WORK
-	*end = get_time();
-#endif
-
 	////////////////////////////////////////////////////////////////////////////////
 	// Reduce Verification Results
 	////////////////////////////////////////////////////////////////////////////////
