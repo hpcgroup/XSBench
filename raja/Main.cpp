@@ -23,7 +23,7 @@ int main( int argc, char* argv[] )
 	// This is not reflective of a real Monte Carlo simulation workload,
 	// therefore, do not profile this region!
 	// =====================================================================
-	
+
 	SimulationData SD;
 
 	// If read from file mode is selected, skip initialization and load
@@ -40,7 +40,7 @@ int main( int argc, char* argv[] )
 
 	// =====================================================================
 	// Cross Section (XS) Parallel Lookup Simulation
-	// This is the section that should be profiled, as it reflects a 
+	// This is the section that should be profiled, as it reflects a
 	// realistic continuous energy Monte Carlo macroscopic cross section
 	// lookup kernel.
 	// =====================================================================
@@ -71,8 +71,8 @@ int main( int argc, char* argv[] )
 		exit(1);
 	}
 
-	if( mype == 0)	
-	{	
+	if( mype == 0)
+	{
 		printf("\n" );
 		printf("Simulation complete.\n" );
 	}
@@ -83,7 +83,7 @@ int main( int argc, char* argv[] )
 	// Final Hash Step
 	verification = verification % 999983;
 
-    release_memory(SD);
+	release_memory(SD);
 
 	// Print / Save Results and Exit
 	int is_invalid_result = print_results( in, mype, omp_end-omp_start, nprocs, verification );

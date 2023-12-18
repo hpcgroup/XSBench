@@ -2,17 +2,19 @@
 # User Options
 #===============================================================================
 
-RAJA_PATH ?= 
-Umpire_PATH ?=
-camp_PATH ?=
-TARGET ?= # Choose Target Backend (CUDA, HIP, OpenMP) Default is Sequential
-SM_VERSION ?= # For CUDA Target
+RAJA_PATH    ?=
+Umpire_PATH  ?=
+camp_PATH    ?=
+TARGET       ?= # Choose Target Backend (CUDA, HIP, OpenMP) Default is Sequential
+SM_VERSION   ?= # For CUDA Target
 OFFLOAD_ARCH ?= # For HIP Target
 
 OPTIMIZE ?= yes
-DEBUG ?= no
-PROFILE ?= no
-MPI ?= no
+DEBUG    ?= no
+PROFILE  ?= no
+MPI      ?= no
+NVTX     ?= no
+LINEINFO ?= no
 
 RAJA_INCLUDE_DIR = $(RAJA_PATH)/include
 RAJA_LIB_DIR = $(RAJA_PATH)/lib
@@ -64,12 +66,26 @@ ifeq ($(OPTIMIZE),yes)
   CXXFLAGS += -O3
 endif
 
+# Get lineinfo without disabling optimizations
+ifeq ($(LINEINFO),yes)
+	CXXFLAGS += -g
+	LDFLAGS += -g
+ifeq ($(TARGET),CUDA)
+	CXXFLAGS += -lineinfo
+	LDFLAGS += -lineinfo
+endif
+endif
+
+ifeq ($(NVTX),yes)
+	CXXFLAGS += -DUSE_NVTX
+endif
+
 ifeq ($(TARGET),CUDA)
   CXX = nvcc
-  RAJA_COMPILER_FLAGS = -x cu --expt-relaxed-constexpr -forward-unknown-to-host-compiler -extended-lambda -restrict -keep -arch=sm_$(SM_VERSION) 
+  RAJA_COMPILER_FLAGS = -x cu --expt-relaxed-constexpr -forward-unknown-to-host-compiler -extended-lambda -restrict -keep -arch=sm_$(SM_VERSION)
   CXXFLAGS += $(CUDAFLAGS)
   RAJA_LINKER_FLAGS += -Xlinker -rpath=$(RAJA_LIB_DIR) -Xlinker -rpath=$(Umpire_LIB_DIR)
-endif  
+endif
 
 ifeq ($(TARGET),HIP)
   CXX = hipcc

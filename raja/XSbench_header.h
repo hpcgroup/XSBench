@@ -14,6 +14,10 @@
 #include "umpire/Allocator.hpp"
 #include "umpire/ResourceManager.hpp"
 
+#ifdef USE_NVTX
+#include <nvtx3/nvToolsExt.h>
+#endif
+
 // Grid types
 #define UNIONIZED 0
 #define NUCLIDE 1
@@ -34,7 +38,7 @@
 #define gpuErrchk(ans) { gpuAssert((ans), __FILE__, __LINE__); }
 inline void gpuAssert(cudaError_t code, const char *file, int line, bool abort=true)
 {
-	if (code != cudaSuccess) 
+  if (code != cudaSuccess) 
 	{
 		fprintf(stderr,"GPUassert: %s %s %d\n", cudaGetErrorString(code), file, line);
 		if (abort) exit(code);
