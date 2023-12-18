@@ -57,11 +57,6 @@ ifeq ($(OPTIMIZE),yes)
   CFLAGS += -O3
 endif
 
-# Align workload to match other implementations
-ifeq ($(ALIGNED),yes)
-  CFLAGS += -DALIGNED_WORK
-endif
-
 #===============================================================================
 # Targets to Build
 #===============================================================================
