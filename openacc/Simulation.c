@@ -41,6 +41,10 @@ unsigned long long run_event_based_simulation(Inputs in, SimulationData SD, int 
 	////////////////////////////////////////////////////////////////////////////////
 	unsigned long long * verification = (unsigned long long *) malloc(in.lookups * sizeof(unsigned long long));
 
+#ifdef USE_NVTX
+	nvtxRangePushA("XSBenchCore");
+#endif
+
         #pragma acc parallel loop\
         copyin( SD)\
         copyin( SD.max_num_nucs)\
@@ -107,6 +111,9 @@ unsigned long long run_event_based_simulation(Inputs in, SimulationData SD, int 
 		verification[i] = max_idx+1;
 	}
 
+#ifdef USE_NVTX
+	nvtxRangePop();
+#endif
 #ifdef ALIGNED_WORK
 	*end = omp_get_wtime();
 #endif

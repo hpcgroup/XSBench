@@ -10,6 +10,7 @@ MPI         ?= no
 OPENACC     ?= yes
 ALIGNED     ?= yes
 CUDA_ARCH   ?= 80
+NVTX        ?= no
 
 #===============================================================================
 # Program name & source code list
@@ -93,6 +94,11 @@ endif
 ifeq ($(MPI),yes)
   CC = mpicc
   CFLAGS += -DMPI
+endif
+
+# Add NVTX annotations
+ifeq ($(NVTX),yes)
+	CFLAGS += -DUSE_NVTX
 endif
 
 #===============================================================================

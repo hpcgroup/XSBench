@@ -16,6 +16,10 @@
 #include<assert.h>
 #include<stdint.h>
 
+#ifdef USE_NVTX
+#include <nvtx3/nvToolsExt.h>
+#endif
+
 // Papi Header
 #ifdef PAPI
 #include "papi.h"
