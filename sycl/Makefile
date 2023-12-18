@@ -11,6 +11,7 @@ CHECK_MAX   ?= no
 USE_CUDA    ?= yes
 CUDA_ARCH   ?= sm_80
 ALIGNED     ?= yes
+NVTX        ?= no
 
 #===============================================================================
 # Program name & source code list
@@ -50,9 +51,9 @@ ifeq ($(COMPILER),llvm)
   CC = clang++
   CFLAGS += -fsycl 
   ifeq ($(USE_CUDA),yes)
-    CFLAGS += -fsycl-targets=nvptx64-nvidia-cuda
+    CFLAGS += -fsycl-targets=nvptx64-nvidia-cuda -L/sw/summit/gcc/11.2.0-0/lib64
   endif
-  #LDFLAGS += -lOpenCL
+  LDFLAGS += -L/sw/summit/gcc/11.2.0-0/lib64
 endif
 
 # IntelOneAPI Compiler
@@ -96,6 +97,11 @@ endif
 
 ifeq ($(ALIGNED),yes)
   CFLAGS += -DALIGNED_WORK
+endif
+
+ifeq ($(NVTX),yes)
+	CFLAGS += -DUSE_NVTX
+	LDFLAGS += -ldl
 endif
 
 #===============================================================================

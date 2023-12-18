@@ -41,6 +41,9 @@ unsigned long long run_event_based_simulation(Inputs in, SimulationData SD, int 
 
 	// Timers
 	double start = get_time();
+#ifdef USE_NVTX
+	nvtxRangePushA("XSBenchCore");
+#endif
 
 	// Scope here is important, as when we exit this blocl we will automatically sync with device
 	// to ensure all work is done and that we can read from verification_host array.
@@ -169,6 +172,9 @@ unsigned long long run_event_based_simulation(Inputs in, SimulationData SD, int 
 		if(mype==0) printf("Beginning event based simulation...\n");
 	}
 
+#ifdef USE_NVTX
+	nvtxRangePop();
+#endif
 #ifdef ALIGNED_WORK
 	*stop = get_time();
 #endif
