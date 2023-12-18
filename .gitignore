@@ -3,6 +3,7 @@
 *.tmp
 KokkosCore_*
 kokkos/desul
+kokkos/kokkos
 *.a
 XSBench
 */XSBench
@@ -13,3 +14,5 @@ XSBench
 *.cudafe1*
 *.fatbin*
 *.module_id
+*.sqlite
+*.nsys-rep
