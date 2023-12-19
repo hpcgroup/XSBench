@@ -2,11 +2,11 @@
 # User Options
 #===============================================================================
 
-COMPILER    ?= amd
-OPTIMIZE    ?= yes
-DEBUG       ?= no
-PROFILE     ?= no
-ALIGNED     ?= yes
+COMPILER    = amd
+OPTIMIZE    = yes
+DEBUG       = no
+PROFILE     = no
+OFFLOAD_ARCH ?= gfx90a
 
 #===============================================================================
 # Program name & source code list
@@ -37,6 +37,7 @@ LDFLAGS = -lm
 # AMD
 ifeq ($(COMPILER),amd)
   CC = hipcc
+  CFLAGS += --offload-arch=${OFFLOAD_ARCH}
 endif
 
 # Debug Flags
@@ -54,11 +55,6 @@ endif
 # Optimization Flags
 ifeq ($(OPTIMIZE),yes)
   CFLAGS += -O3
-endif
-
-# Align workload to match other implementations
-ifeq ($(ALIGNED),yes)
-  CFLAGS += -DALIGNED_WORK
 endif
 
 #===============================================================================
