@@ -6,7 +6,7 @@ COMPILER    ?= nvidia
 OPTIMIZE    ?= yes
 DEBUG       ?= no
 PROFILE     ?= no
-SM_VERSION  ?= 86
+SM_VERSION  ?= 80
 
 #===============================================================================
 # Program name & source code list
