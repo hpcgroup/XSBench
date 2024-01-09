@@ -12,7 +12,7 @@
 // line argument.
 ////////////////////////////////////////////////////////////////////////////////////
 
-unsigned long long run_event_based_simulation_baseline(Inputs in, SimulationData GSD, int mype, double* end)
+unsigned long long run_event_based_simulation_baseline(Inputs in, SimulationData GSD, int mype, Profile* profile)
 {
 	////////////////////////////////////////////////////////////////////////////////
 	// Configure & Launch Simulation Kernel
@@ -22,14 +22,22 @@ unsigned long long run_event_based_simulation_baseline(Inputs in, SimulationData
 	int nthreads = 256;
 	int nblocks = ceil( (double) in.lookups / (double) nthreads);
 
-	xs_lookup_kernel_baseline<<<nblocks, nthreads>>>( in, GSD );
+	int nwarmups = in.num_iterations / 10;
+	double start = 0.0;
+	for (int i = 0; i < in.num_iterations; i++) {
+		if (i == nwarmups) start = get_time();
+		xs_lookup_kernel_baseline<<<nblocks, nthreads>>>( in, GSD );
+	}
 	gpuErrchk( cudaPeekAtLastError() );
 	gpuErrchk( cudaDeviceSynchronize() );
+	profile->kernel_time = get_time() - start;
 
 	size_t sz = in.lookups * sizeof(unsigned long);
 	unsigned long * v = (unsigned long *) malloc(sz);
 
+	start = get_time();
 	gpuErrchk( cudaMemcpy(v, GSD.verification, sz, cudaMemcpyDeviceToHost) );
+	profile->d2h_time = get_time() - start;
 
 	////////////////////////////////////////////////////////////////////////////////
 	// Reduce Verification Results

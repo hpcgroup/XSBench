@@ -38,10 +38,14 @@ int main( int argc, char* argv[] )
 	if( in.binary_mode == WRITE && mype == 0 )
 		binary_write(in, SD);
 
+	Profile profile;
+
 	omp_start = get_time();
 
 	// Move data to GPU
+	double move_start = get_time();
 	SimulationData GSD = move_simulation_data_to_device( in, mype, SD );
+	profile.h2d_time = get_time() - move_start;
 
 	// =====================================================================
 	// Cross Section (XS) Parallel Lookup Simulation
@@ -64,7 +68,7 @@ int main( int argc, char* argv[] )
 	if( in.simulation_method == EVENT_BASED )
 	{
 		if( in.kernel_id == 0 )
-			verification = run_event_based_simulation_baseline(in, GSD, mype, &omp_end);
+			verification = run_event_based_simulation_baseline(in, GSD, mype, &profile);
 		else if( in.kernel_id == 1 )
 			verification = run_event_based_simulation_optimization_1(in, GSD, mype);
 		else if( in.kernel_id == 2 )
@@ -106,6 +110,12 @@ int main( int argc, char* argv[] )
 
 	// Print / Save Results and Exit
 	int is_invalid_result = print_results( in, mype, omp_end-omp_start, nprocs, verification );
+
+	printf("host_to_device_ms,kernel_ms,device_to_host_ms\n");
+	printf("%f,%f,%f\n",
+	       profile.h2d_time*1000,
+	       profile.kernel_time*1000,
+	       profile.d2h_time*1000);
 
 	return is_invalid_result;
 }
