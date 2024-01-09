@@ -25,7 +25,10 @@ unsigned long long run_event_based_simulation_baseline(Inputs in, SimulationData
 	int nwarmups = in.num_iterations / 10;
 	double start = 0.0;
 	for (int i = 0; i < in.num_iterations; i++) {
-		if (i == nwarmups) start = get_time();
+		if (i == nwarmups) {
+			gpuErrchk( cudaDeviceSynchronize() );
+			start = get_time();
+		}
 		xs_lookup_kernel_baseline<<<nblocks, nthreads>>>( in, GSD );
 	}
 	gpuErrchk( cudaPeekAtLastError() );
