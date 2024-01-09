@@ -1,4 +1,3 @@
-// -*- c-basic-offset: 8; tab-width: 8; indent-tabs-mode: t; -*-
 #include "XSbench_header.cuh"
 
 ////////////////////////////////////////////////////////////////////////////////////
@@ -27,8 +26,9 @@ unsigned long long run_event_based_simulation_baseline(Inputs in, SimulationData
 	gpuErrchk( cudaPeekAtLastError() );
 	gpuErrchk( cudaDeviceSynchronize() );
 
-    size_t sz = in.lookups * sizeof(unsigned long);
+	size_t sz = in.lookups * sizeof(unsigned long);
 	unsigned long * v = (unsigned long *) malloc(sz);
+
 	gpuErrchk( cudaMemcpy(v, GSD.verification, sz, cudaMemcpyDeviceToHost) );
 
 	////////////////////////////////////////////////////////////////////////////////
@@ -106,10 +106,10 @@ __global__ void xs_lookup_kernel_baseline(Inputs in, SimulationData GSD )
 
 // Calculates the microscopic cross section for a given nuclide & energy
 __device__ void calculate_micro_xs(   double p_energy, int nuc, long n_isotopes,
-                           long n_gridpoints,
-                           double * __restrict__ egrid, int * __restrict__ index_data,
-                           NuclideGridPoint * __restrict__ nuclide_grids,
-                           long idx, double * __restrict__ xs_vector, int grid_type, int hash_bins ){
+			   long n_gridpoints,
+			   double * __restrict__ egrid, int * __restrict__ index_data,
+			   NuclideGridPoint * __restrict__ nuclide_grids,
+			   long idx, double * __restrict__ xs_vector, int grid_type, int hash_bins ){
 	// Variables
 	double f;
 	NuclideGridPoint * low, * high;
@@ -191,12 +191,12 @@ __device__ void calculate_micro_xs(   double p_energy, int nuc, long n_isotopes,
 
 // Calculates macroscopic cross section based on a given material & energy
 __device__ void calculate_macro_xs( double p_energy, int mat, long n_isotopes,
-                         long n_gridpoints, int * __restrict__ num_nucs,
-                         double * __restrict__ concs,
-                         double * __restrict__ egrid, int * __restrict__ index_data,
-                         NuclideGridPoint * __restrict__ nuclide_grids,
-                         int * __restrict__ mats,
-                         double * __restrict__ macro_xs_vector, int grid_type, int hash_bins, int max_num_nucs ){
+			 long n_gridpoints, int * __restrict__ num_nucs,
+			 double * __restrict__ concs,
+			 double * __restrict__ egrid, int * __restrict__ index_data,
+			 NuclideGridPoint * __restrict__ nuclide_grids,
+			 int * __restrict__ mats,
+			 double * __restrict__ macro_xs_vector, int grid_type, int hash_bins, int max_num_nucs ){
 	int p_nuc; // the nuclide we are looking up
 	long idx = -1;
 	double conc; // the concentration of the nuclide in the material
@@ -234,8 +234,8 @@ __device__ void calculate_macro_xs( double p_energy, int mat, long n_isotopes,
 		p_nuc = mats[mat*max_num_nucs + j];
 		conc = concs[mat*max_num_nucs + j];
 		calculate_micro_xs( p_energy, p_nuc, n_isotopes,
-		                    n_gridpoints, egrid, index_data,
-		                    nuclide_grids, idx, xs_vector, grid_type, hash_bins );
+				    n_gridpoints, egrid, index_data,
+				    nuclide_grids, idx, xs_vector, grid_type, hash_bins );
 		for( int k = 0; k < 5; k++ )
 			macro_xs_vector[k] += xs_vector[k] * conc;
 	}
@@ -386,7 +386,7 @@ __device__ uint64_t fast_forward_LCG(uint64_t seed, uint64_t n)
 ////////////////////////////////////////////////////////////////////////////////////
 // Optimization 1 -- Basic kernel splitting of sampling & lookup routines
 ////////////////////////////////////////////////////////////////////////////////////
-// This optimization requires a little extra data to store all material IDs and 
+// This optimization requires a little extra data to store all material IDs and
 // energies for the sampled particles between kernel calls. By itself, this
 // optimization is likely actually a bit of a slowdown compared to the baseline
 // kernel. However, it will be used by better optimization kernels down the line.
@@ -394,9 +394,9 @@ __device__ uint64_t fast_forward_LCG(uint64_t seed, uint64_t n)
 unsigned long long run_event_based_simulation_optimization_1(Inputs in, SimulationData GSD, int mype)
 {
 	const char * optimization_name = "Optimization 1 - basic sample/lookup kernel splitting";
-	
+
 	if( mype == 0)	printf("Simulation Kernel:\"%s\"\n", optimization_name);
-	
+
 	////////////////////////////////////////////////////////////////////////////////
 	// Allocate Additional Data Structures Needed by Optimized Kernel
 	////////////////////////////////////////////////////////////////////////////////
@@ -413,7 +413,7 @@ unsigned long long run_event_based_simulation_optimization_1(Inputs in, Simulati
 	gpuErrchk( cudaMalloc((void **) &GSD.mat_samples, sz) );
 	total_sz += sz;
 	GSD.length_mat_samples = in.lookups;
-	
+
 	if( mype == 0)	printf("Allocated an additional %.0lf MB of data on GPU.\n", total_sz/1024.0/1024.0);
 
 	////////////////////////////////////////////////////////////////////////////////
@@ -423,7 +423,7 @@ unsigned long long run_event_based_simulation_optimization_1(Inputs in, Simulati
 
 	int nthreads = 32;
 	int nblocks = ceil( (double) in.lookups / 32.0);
-	
+
 	sampling_kernel<<<nblocks, nthreads>>>( in, GSD );
 	gpuErrchk( cudaPeekAtLastError() );
 	gpuErrchk( cudaDeviceSynchronize() );
@@ -431,7 +431,7 @@ unsigned long long run_event_based_simulation_optimization_1(Inputs in, Simulati
 	xs_lookup_kernel_optimization_1<<<nblocks, nthreads>>>( in, GSD );
 	gpuErrchk( cudaPeekAtLastError() );
 	gpuErrchk( cudaDeviceSynchronize() );
-	
+
 	////////////////////////////////////////////////////////////////////////////////
 	// Reduce Verification Results
 	////////////////////////////////////////////////////////////////////////////////
@@ -453,14 +453,14 @@ __global__ void sampling_kernel(Inputs in, SimulationData GSD )
 		return;
 
 	// Set the initial seed value
-	uint64_t seed = STARTING_SEED;	
+	uint64_t seed = STARTING_SEED;
 
 	// Forward seed to lookup index (we need 2 samples per lookup)
 	seed = fast_forward_LCG(seed, 2*i);
 
 	// Randomly pick an energy and material for the particle
 	double p_energy = LCG_random_double(&seed);
-	int mat         = pick_mat(&seed); 
+	int mat         = pick_mat(&seed);
 
 	// Store sample data in state array
 	GSD.p_energy_samples[i] = p_energy;
@@ -474,9 +474,9 @@ __global__ void xs_lookup_kernel_optimization_1(Inputs in, SimulationData GSD )
 
 	if( i >= in.lookups )
 		return;
-		
+
 	double macro_xs_vector[5] = {0};
-		
+
 	// Perform macroscopic Cross Section Lookup
 	calculate_macro_xs(
 			GSD.p_energy_samples[i],        // Sampled neutron energy (in lethargy)
@@ -519,7 +519,7 @@ __global__ void xs_lookup_kernel_optimization_1(Inputs in, SimulationData GSD )
 ////////////////////////////////////////////////////////////////////////////////////
 // This one builds on the first optimization. It uses multiple kernels, one
 // for each material type, to better balance the workload across threads within
-// a warp. This works because each material will have a different number of 
+// a warp. This works because each material will have a different number of
 // isotopes, with some having a ton, meaning that SIMD efficiency can be rather
 // low by default. Better efficiency may be gained in further optimizations by
 // sorting the lookups first.
@@ -527,9 +527,9 @@ __global__ void xs_lookup_kernel_optimization_1(Inputs in, SimulationData GSD )
 unsigned long long run_event_based_simulation_optimization_2(Inputs in, SimulationData GSD, int mype)
 {
 	const char * optimization_name = "Optimization 2 - Material Lookup Kernels";
-	
+
 	if( mype == 0)	printf("Simulation Kernel:\"%s\"\n", optimization_name);
-	
+
 	////////////////////////////////////////////////////////////////////////////////
 	// Allocate Additional Data Structures Needed by Optimized Kernel
 	////////////////////////////////////////////////////////////////////////////////
@@ -546,7 +546,7 @@ unsigned long long run_event_based_simulation_optimization_2(Inputs in, Simulati
 	gpuErrchk( cudaMalloc((void **) &GSD.mat_samples, sz) );
 	total_sz += sz;
 	GSD.length_mat_samples = in.lookups;
-	
+
 	if( mype == 0)	printf("Allocated an additional %.0lf MB of data on GPU.\n", total_sz/1024.0/1024.0);
 
 	////////////////////////////////////////////////////////////////////////////////
@@ -556,7 +556,7 @@ unsigned long long run_event_based_simulation_optimization_2(Inputs in, Simulati
 
 	int nthreads = 32;
 	int nblocks = ceil( (double) in.lookups / 32.0);
-	
+
 	sampling_kernel<<<nblocks, nthreads>>>( in, GSD );
 	gpuErrchk( cudaPeekAtLastError() );
 	gpuErrchk( cudaDeviceSynchronize() );
@@ -566,7 +566,7 @@ unsigned long long run_event_based_simulation_optimization_2(Inputs in, Simulati
 		xs_lookup_kernel_optimization_2<<<nblocks, nthreads>>>( in, GSD, m );
 	gpuErrchk( cudaPeekAtLastError() );
 	gpuErrchk( cudaDeviceSynchronize() );
-	
+
 	////////////////////////////////////////////////////////////////////////////////
 	// Reduce Verification Results
 	////////////////////////////////////////////////////////////////////////////////
@@ -586,14 +586,14 @@ __global__ void xs_lookup_kernel_optimization_2(Inputs in, SimulationData GSD, i
 
 	if( i >= in.lookups )
 		return;
-	
+
 	// Check that our material type matches the kernel material
 	int mat = GSD.mat_samples[i];
 	if( mat != m )
 		return;
 
 	double macro_xs_vector[5] = {0};
-		
+
 	// Perform macroscopic Cross Section Lookup
 	calculate_macro_xs(
 			GSD.p_energy_samples[i],        // Sampled neutron energy (in lethargy)
@@ -643,9 +643,9 @@ __global__ void xs_lookup_kernel_optimization_2(Inputs in, SimulationData GSD, i
 unsigned long long run_event_based_simulation_optimization_3(Inputs in, SimulationData GSD, int mype)
 {
 	const char * optimization_name = "Optimization 3 - Fuel or Other Lookup Kernels";
-	
+
 	if( mype == 0)	printf("Simulation Kernel:\"%s\"\n", optimization_name);
-	
+
 	////////////////////////////////////////////////////////////////////////////////
 	// Allocate Additional Data Structures Needed by Optimized Kernel
 	////////////////////////////////////////////////////////////////////////////////
@@ -662,7 +662,7 @@ unsigned long long run_event_based_simulation_optimization_3(Inputs in, Simulati
 	gpuErrchk( cudaMalloc((void **) &GSD.mat_samples, sz) );
 	total_sz += sz;
 	GSD.length_mat_samples = in.lookups;
-	
+
 	if( mype == 0)	printf("Allocated an additional %.0lf MB of data on GPU.\n", total_sz/1024.0/1024.0);
 
 	////////////////////////////////////////////////////////////////////////////////
@@ -672,7 +672,7 @@ unsigned long long run_event_based_simulation_optimization_3(Inputs in, Simulati
 
 	int nthreads = 32;
 	int nblocks = ceil( (double) in.lookups / 32.0);
-	
+
 	sampling_kernel<<<nblocks, nthreads>>>( in, GSD );
 	gpuErrchk( cudaPeekAtLastError() );
 	gpuErrchk( cudaDeviceSynchronize() );
@@ -682,7 +682,7 @@ unsigned long long run_event_based_simulation_optimization_3(Inputs in, Simulati
 	xs_lookup_kernel_optimization_3<<<nblocks, nthreads>>>( in, GSD, 1 );
 	gpuErrchk( cudaPeekAtLastError() );
 	gpuErrchk( cudaDeviceSynchronize() );
-	
+
 	////////////////////////////////////////////////////////////////////////////////
 	// Reduce Verification Results
 	////////////////////////////////////////////////////////////////////////////////
@@ -702,7 +702,7 @@ __global__ void xs_lookup_kernel_optimization_3(Inputs in, SimulationData GSD, i
 
 	if( i >= in.lookups )
 		return;
-	
+
 	int mat = GSD.mat_samples[i];
 
 	// If this is the fuel kernel, AND this is a fuel lookup, then perform a lookup
@@ -710,7 +710,7 @@ __global__ void xs_lookup_kernel_optimization_3(Inputs in, SimulationData GSD, i
 	if( ((is_fuel == 1) && (mat == 0)) || ((is_fuel == 0) && (mat != 0 ) ))
 	{
 		double macro_xs_vector[5] = {0};
-			
+
 		// Perform macroscopic Cross Section Lookup
 		calculate_macro_xs(
 				GSD.p_energy_samples[i],        // Sampled neutron energy (in lethargy)
@@ -760,9 +760,9 @@ __global__ void xs_lookup_kernel_optimization_3(Inputs in, SimulationData GSD, i
 unsigned long long run_event_based_simulation_optimization_4(Inputs in, SimulationData GSD, int mype)
 {
 	const char * optimization_name = "Optimization 4 - All Material Lookup Kernels + Material Sort";
-	
+
 	if( mype == 0)	printf("Simulation Kernel:\"%s\"\n", optimization_name);
-	
+
 	////////////////////////////////////////////////////////////////////////////////
 	// Allocate Additional Data Structures Needed by Optimized Kernel
 	////////////////////////////////////////////////////////////////////////////////
@@ -779,7 +779,7 @@ unsigned long long run_event_based_simulation_optimization_4(Inputs in, Simulati
 	gpuErrchk( cudaMalloc((void **) &GSD.mat_samples, sz) );
 	total_sz += sz;
 	GSD.length_mat_samples = in.lookups;
-	
+
 	if( mype == 0)	printf("Allocated an additional %.0lf MB of data on GPU.\n", total_sz/1024.0/1024.0);
 
 	////////////////////////////////////////////////////////////////////////////////
@@ -789,7 +789,7 @@ unsigned long long run_event_based_simulation_optimization_4(Inputs in, Simulati
 
 	int nthreads = 32;
 	int nblocks = ceil( (double) in.lookups / 32.0);
-	
+
 	sampling_kernel<<<nblocks, nthreads>>>( in, GSD );
 	gpuErrchk( cudaPeekAtLastError() );
 	gpuErrchk( cudaDeviceSynchronize() );
@@ -801,7 +801,7 @@ unsigned long long run_event_based_simulation_optimization_4(Inputs in, Simulati
 
 	// Sort materials
 	thrust::sort_by_key(thrust::device, GSD.mat_samples, GSD.mat_samples + in.lookups, GSD.p_energy_samples);
-	
+
 	// Launch all material kernels individually
 	int offset = 0;
 	for( int m = 0; m < 12; m++ )
@@ -813,7 +813,7 @@ unsigned long long run_event_based_simulation_optimization_4(Inputs in, Simulati
 	}
 	gpuErrchk( cudaPeekAtLastError() );
 	gpuErrchk( cudaDeviceSynchronize() );
-	
+
 	////////////////////////////////////////////////////////////////////////////////
 	// Reduce Verification Results
 	////////////////////////////////////////////////////////////////////////////////
@@ -842,7 +842,7 @@ __global__ void xs_lookup_kernel_optimization_4(Inputs in, SimulationData GSD, i
 		return;
 
 	double macro_xs_vector[5] = {0};
-		
+
 	// Perform macroscopic Cross Section Lookup
 	calculate_macro_xs(
 			GSD.p_energy_samples[i],        // Sampled neutron energy (in lethargy)
@@ -901,9 +901,9 @@ struct is_mat_fuel{
 unsigned long long run_event_based_simulation_optimization_5(Inputs in, SimulationData GSD, int mype)
 {
 	const char * optimization_name = "Optimization 5 - Fuel/No Fuel Lookup Kernels + Fuel/No Fuel Sort";
-	
+
 	if( mype == 0)	printf("Simulation Kernel:\"%s\"\n", optimization_name);
-	
+
 	////////////////////////////////////////////////////////////////////////////////
 	// Allocate Additional Data Structures Needed by Optimized Kernel
 	////////////////////////////////////////////////////////////////////////////////
@@ -920,7 +920,7 @@ unsigned long long run_event_based_simulation_optimization_5(Inputs in, Simulati
 	gpuErrchk( cudaMalloc((void **) &GSD.mat_samples, sz) );
 	total_sz += sz;
 	GSD.length_mat_samples = in.lookups;
-	
+
 	if( mype == 0)	printf("Allocated an additional %.0lf MB of data on GPU.\n", total_sz/1024.0/1024.0);
 
 	////////////////////////////////////////////////////////////////////////////////
@@ -930,7 +930,7 @@ unsigned long long run_event_based_simulation_optimization_5(Inputs in, Simulati
 
 	int nthreads = 32;
 	int nblocks = ceil( (double) in.lookups / 32.0);
-	
+
 	sampling_kernel<<<nblocks, nthreads>>>( in, GSD );
 	gpuErrchk( cudaPeekAtLastError() );
 	gpuErrchk( cudaDeviceSynchronize() );
@@ -950,7 +950,7 @@ unsigned long long run_event_based_simulation_optimization_5(Inputs in, Simulati
 
 	gpuErrchk( cudaPeekAtLastError() );
 	gpuErrchk( cudaDeviceSynchronize() );
-	
+
 	////////////////////////////////////////////////////////////////////////////////
 	// Reduce Verification Results
 	////////////////////////////////////////////////////////////////////////////////
@@ -970,11 +970,11 @@ __global__ void xs_lookup_kernel_optimization_5(Inputs in, SimulationData GSD, i
 
 	if( i >= n_lookups )
 		return;
-	
+
 	i += offset;
 
 	double macro_xs_vector[5] = {0};
-		
+
 	// Perform macroscopic Cross Section Lookup
 	calculate_macro_xs(
 			GSD.p_energy_samples[i],        // Sampled neutron energy (in lethargy)
@@ -1030,9 +1030,9 @@ __global__ void xs_lookup_kernel_optimization_5(Inputs in, SimulationData GSD, i
 unsigned long long run_event_based_simulation_optimization_6(Inputs in, SimulationData GSD, int mype)
 {
 	const char * optimization_name = "Optimization 6 - Material & Energy Sorts + Material-specific Kernels";
-	
+
 	if( mype == 0)	printf("Simulation Kernel:\"%s\"\n", optimization_name);
-	
+
 	////////////////////////////////////////////////////////////////////////////////
 	// Allocate Additional Data Structures Needed by Optimized Kernel
 	////////////////////////////////////////////////////////////////////////////////
@@ -1049,7 +1049,7 @@ unsigned long long run_event_based_simulation_optimization_6(Inputs in, Simulati
 	gpuErrchk( cudaMalloc((void **) &GSD.mat_samples, sz) );
 	total_sz += sz;
 	GSD.length_mat_samples = in.lookups;
-	
+
 	if( mype == 0)	printf("Allocated an additional %.0lf MB of data on GPU.\n", total_sz/1024.0/1024.0);
 
 	////////////////////////////////////////////////////////////////////////////////
@@ -1059,7 +1059,7 @@ unsigned long long run_event_based_simulation_optimization_6(Inputs in, Simulati
 
 	int nthreads = 32;
 	int nblocks = ceil( (double) in.lookups / 32.0);
-	
+
 	sampling_kernel<<<nblocks, nthreads>>>( in, GSD );
 	gpuErrchk( cudaPeekAtLastError() );
 	gpuErrchk( cudaDeviceSynchronize() );
@@ -1079,7 +1079,7 @@ unsigned long long run_event_based_simulation_optimization_6(Inputs in, Simulati
 		thrust::sort_by_key(thrust::device, GSD.p_energy_samples + offset, GSD.p_energy_samples + offset + n_lookups_per_material[m], GSD.mat_samples + offset);
 		offset += n_lookups_per_material[m];
 	}
-	
+
 	// Launch all material kernels individually
 	offset = 0;
 	for( int m = 0; m < 12; m++ )
@@ -1091,7 +1091,7 @@ unsigned long long run_event_based_simulation_optimization_6(Inputs in, Simulati
 	}
 	gpuErrchk( cudaPeekAtLastError() );
 	gpuErrchk( cudaDeviceSynchronize() );
-	
+
 	////////////////////////////////////////////////////////////////////////////////
 	// Reduce Verification Results
 	////////////////////////////////////////////////////////////////////////////////
