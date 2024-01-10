@@ -70,9 +70,11 @@ double get_time(void)
 	return MPI_Wtime();
 #endif
 
+	/*
 #ifdef OPENMP
 	return omp_get_wtime();
 #endif
+	*/
 
 	// If using C++, we can do this:
 	unsigned long us_since_epoch = std::chrono::high_resolution_clock::now().time_since_epoch() / std::chrono::microseconds(1);

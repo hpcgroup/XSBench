@@ -53,13 +53,15 @@ int main( int argc, char* argv[] )
 	    border_print();
 	}
 
+	Profile profile;
+
 	omp_start = get_time();
 
 	// Run simulation
 	if( in.simulation_method == EVENT_BASED )
 	{
 	    if( in.kernel_id == 0 )
-		verification = run_event_based_simulation_baseline(in, SD, mype);
+		    verification = run_event_based_simulation_baseline(in, SD, mype, &profile);
 	    /*
 	    else if( in.kernel_id == 1 )
 		verification = run_event_based_simulation_optimization_1(in, GSD, mype);
@@ -102,6 +104,12 @@ int main( int argc, char* argv[] )
 
 	// Print / Save Results and Exit
 	int is_invalid_result = print_results( in, mype, omp_end-omp_start, nprocs, verification );
+
+	printf("host_to_device_ms,kernel_ms,device_to_host_ms\n");
+	printf("%f,%f,%f\n",
+	       profile.h2d_time*1000,
+	       profile.kernel_time*1000,
+	       profile.d2h_time*1000);
 
 	return is_invalid_result;
 }
