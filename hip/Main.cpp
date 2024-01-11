@@ -16,7 +16,7 @@ int main( int argc, char* argv[] )
 
 	// Print-out of Input Summary
 	if( mype == 0 )
-	    print_inputs( in, nprocs, version );
+		print_inputs( in, nprocs, version );
 
 	// =====================================================================
 	// Prepare Nuclide Energy Grids, Unionized Energy Grid, & Material Data
@@ -29,14 +29,14 @@ int main( int argc, char* argv[] )
 	// If read from file mode is selected, skip initialization and load
 	// all simulation data structures from file instead
 	if( in.binary_mode == READ )
-	    SD = binary_read(in);
+		SD = binary_read(in);
 	else
-	    SD = grid_init_do_not_profile( in, mype );
+		SD = grid_init_do_not_profile( in, mype );
 
 	// If writing from file mode is selected, write all simulation data
 	// structures to file
 	if( in.binary_mode == WRITE && mype == 0 )
-	    binary_write(in, SD);
+		binary_write(in, SD);
 
 
 	// =====================================================================
@@ -47,10 +47,10 @@ int main( int argc, char* argv[] )
 	// =====================================================================
 	if( mype == 0 )
 	{
-	    printf("\n");
-	    border_print();
-	    center_print("SIMULATION", 79);
-	    border_print();
+		printf("\n");
+		border_print();
+		center_print("SIMULATION", 79);
+		border_print();
 	}
 
 	Profile profile;
@@ -60,38 +60,38 @@ int main( int argc, char* argv[] )
 	// Run simulation
 	if( in.simulation_method == EVENT_BASED )
 	{
-	    if( in.kernel_id == 0 )
-		    verification = run_event_based_simulation_baseline(in, SD, mype, &profile);
-	    /*
-	    else if( in.kernel_id == 1 )
-		verification = run_event_based_simulation_optimization_1(in, GSD, mype);
-	    else if( in.kernel_id == 2 )
-		verification = run_event_based_simulation_optimization_2(in, GSD, mype);
-	    else if( in.kernel_id == 3 )
-		verification = run_event_based_simulation_optimization_3(in, GSD, mype);
-	    else if( in.kernel_id == 4 )
-		verification = run_event_based_simulation_optimization_4(in, GSD, mype);
-	    else if( in.kernel_id == 5 )
-		verification = run_event_based_simulation_optimization_5(in, GSD, mype);
-	    else if( in.kernel_id == 6 )
-		verification = run_event_based_simulation_optimization_6(in, GSD, mype);
-	    */
-	    else
-	    {
-		printf("Error: No kernel ID %d found!\n", in.kernel_id);
-		exit(1);
-	    }
+		if( in.kernel_id == 0 )
+			verification = run_event_based_simulation_baseline(in, SD, mype, &profile);
+		/*
+		else if( in.kernel_id == 1 )
+			verification = run_event_based_simulation_optimization_1(in, GSD, mype);
+		else if( in.kernel_id == 2 )
+			verification = run_event_based_simulation_optimization_2(in, GSD, mype);
+		else if( in.kernel_id == 3 )
+			verification = run_event_based_simulation_optimization_3(in, GSD, mype);
+		else if( in.kernel_id == 4 )
+			verification = run_event_based_simulation_optimization_4(in, GSD, mype);
+		else if( in.kernel_id == 5 )
+			verification = run_event_based_simulation_optimization_5(in, GSD, mype);
+		else if( in.kernel_id == 6 )
+			verification = run_event_based_simulation_optimization_6(in, GSD, mype);
+		*/
+		else
+		{
+			printf("Error: No kernel ID %d found!\n", in.kernel_id);
+			exit(1);
+		}
 	}
 	else
 	{
-	    printf("History-based simulation not implemented in CUDA code. Instead,\nuse the event-based method with \"-m event\" argument.\n");
-	    exit(1);
+		printf("History-based simulation not implemented in CUDA code. Instead,\nuse the event-based method with \"-m event\" argument.\n");
+		exit(1);
 	}
 
 	if( mype == 0)
 	{
-	    printf("\n" );
-	    printf("Simulation complete.\n" );
+		printf("\n" );
+		printf("Simulation complete.\n" );
 	}
 
 	// End Simulation Timer
