@@ -11,7 +11,7 @@
 // are not yet implemented for this OpenMP targeting offload port.
 ////////////////////////////////////////////////////////////////////////////////////
 
-unsigned long long run_event_based_simulation(Inputs in, SimulationData SD, int mype, double* end)
+unsigned long long run_event_based_simulation(Inputs in, SimulationData SD, int mype, double* end, Profile* profile)
 {
 	if( mype == 0)
 		printf("Beginning event based simulation...\n");
@@ -39,6 +39,8 @@ unsigned long long run_event_based_simulation(Inputs in, SimulationData SD, int 
 
 	Kokkos::Timer start;
 	start.reset();
+
+	double startP = get_time();
 
 	UIntView u_max_num_nucs(&SD.max_num_nucs, 1);
         SD.d_max_num_nucs = new IntView("d_max_num_nucs", length_max_num_nucs);
@@ -86,65 +88,80 @@ unsigned long long run_event_based_simulation(Inputs in, SimulationData SD, int 
 			Kokkos::create_mirror_view(d_verification);
 	Kokkos::deep_copy(d_verification, verification);
 
-	Kokkos::parallel_for("Simulation",
-			     Kokkos::RangePolicy<Kokkos::DefaultExecutionSpace>(0, in.lookups),
-			     KOKKOS_LAMBDA (int i) {
-		// Set the initial seed value
-		uint64_t seed = STARTING_SEED;
+	profile->h2d_time = get_time() - startP;
 
-		// Forward seed to lookup index (we need 2 samples per lookup)
-		seed = fast_forward_LCG(seed, 2*i);
-
-		// Randomly pick an energy and material for the particle
-		double p_energy = LCG_random_double(&seed);
-		int mat         = pick_mat(&seed);
-
-		// debugging
-		//printf("E = %lf mat = %d\n", p_energy, mat);
-
-		double macro_xs_vector[5] = {0};
-
-		// Perform macroscopic Cross Section Lookup
-		calculate_macro_xs(
-				p_energy,        // Sampled neutron energy (in lethargy)
-				mat,             // Sampled material type index neutron is in
-				in.n_isotopes,   // Total number of isotopes in simulation
-				in.n_gridpoints, // Number of gridpoints per isotope in simulation
-				num_nucs,     // 1-D array with number of nuclides per material
-				concs,        // Flattened 2-D array with concentration of each nuclide in each material
-				unionized_energy_array, // 1-D Unionized energy array
-				index_grid,   // Flattened 2-D grid holding indices into nuclide grid for each unionized energy level
-				nuclide_grid, // Flattened 2-D grid holding energy levels and XS_data for all nuclides in simulation
-				mats,         // Flattened 2-D array with nuclide indices defining composition of each type of material
-				macro_xs_vector, // 1-D array with result of the macroscopic cross section (5 different reaction channels)
-				in.grid_type,    // Lookup type (nuclide, hash, or unionized)
-				in.hash_bins,    // Number of hash bins used (if using hash lookup type)
-				max_num_nucs(0)  // Maximum number of nuclides present in any material
-				);
-
-		// For verification, and to prevent the compiler from optimizing
-		// all work out, we interrogate the returned macro_xs_vector array
-		// to find its maximum value index, then increment the verification
-		// value by that index. In this implementation, we prevent thread
-		// contention by using an OMP reduction on the verification value.
-		// For accelerators, a different approach might be required
-		// (e.g., atomics, reduction of thread-specific values in large
-		// array via CUDA thrust, etc).
-		double max = -1.0;
-		int max_idx = 0;
-		for(int j = 0; j < 5; j++ )
-		{
-			if( macro_xs_vector[j] > max )
-			{
-				max = macro_xs_vector[j];
-				max_idx = j;
-			}
+	int nwarmups = in.num_iterations / 10;
+	for (int it = 0; it < in.num_iterations; it++) {
+		if (it == nwarmups) {
+			Kokkos::fence();
+			startP = get_time();
 		}
-		d_verification(i) = max_idx+1;
-	});
+		Kokkos::parallel_for("Simulation",
+				     Kokkos::RangePolicy<Kokkos::DefaultExecutionSpace>(0, in.lookups),
+				     KOKKOS_LAMBDA (int i) {
+			// Set the initial seed value
+			uint64_t seed = STARTING_SEED;
+
+			// Forward seed to lookup index (we need 2 samples per lookup)
+			seed = fast_forward_LCG(seed, 2*i);
+
+			// Randomly pick an energy and material for the particle
+			double p_energy = LCG_random_double(&seed);
+			int mat         = pick_mat(&seed);
+
+			// debugging
+			//printf("E = %lf mat = %d\n", p_energy, mat);
+
+			double macro_xs_vector[5] = {0};
+
+			// Perform macroscopic Cross Section Lookup
+			calculate_macro_xs(
+					p_energy,        // Sampled neutron energy (in lethargy)
+					mat,             // Sampled material type index neutron is in
+					in.n_isotopes,   // Total number of isotopes in simulation
+					in.n_gridpoints, // Number of gridpoints per isotope in simulation
+					num_nucs,     // 1-D array with number of nuclides per material
+					concs,        // Flattened 2-D array with concentration of each nuclide in each material
+					unionized_energy_array, // 1-D Unionized energy array
+					index_grid,   // Flattened 2-D grid holding indices into nuclide grid for each unionized energy level
+					nuclide_grid, // Flattened 2-D grid holding energy levels and XS_data for all nuclides in simulation
+					mats,         // Flattened 2-D array with nuclide indices defining composition of each type of material
+					macro_xs_vector, // 1-D array with result of the macroscopic cross section (5 different reaction channels)
+					in.grid_type,    // Lookup type (nuclide, hash, or unionized)
+					in.hash_bins,    // Number of hash bins used (if using hash lookup type)
+					max_num_nucs(0)  // Maximum number of nuclides present in any material
+			 		);
+
+			// For verification, and to prevent the compiler from optimizing
+			// all work out, we interrogate the returned macro_xs_vector array
+			// to find its maximum value index, then increment the verification
+			// value by that index. In this implementation, we prevent thread
+			// contention by using an OMP reduction on the verification value.
+			// For accelerators, a different approach might be required
+			// (e.g., atomics, reduction of thread-specific values in large
+			// array via CUDA thrust, etc).
+			double max = -1.0;
+			int max_idx = 0;
+			for(int j = 0; j < 5; j++ )
+			{
+				if( macro_xs_vector[j] > max )
+				{
+					max = macro_xs_vector[j];
+					max_idx = j;
+				}
+			}
+			d_verification(i) = max_idx+1;
+		});
+	}
+
+	Kokkos::fence();
+	profile->kernel_time = get_time() - startP;
+
+	startP = get_time();
 
 	Kokkos::deep_copy(verification, d_verification);
-	Kokkos::fence();
+
+	profile->d2h_time = get_time() - startP;
 
 	// End Simulation Timer
 	*end = start.seconds();

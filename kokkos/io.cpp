@@ -157,6 +157,7 @@ void print_inputs(Inputs in, int nprocs, int version )
 		printf("XS Lookups per Particle:      "); fancy_int(in.lookups);
 	}
 	printf("Total XS Lookups:             "); fancy_int(in.lookups);
+	printf("Total XS Iterations:          "); fancy_int(in.num_iterations);
 	#ifdef MPI
 	printf("MPI Ranks:                    %d\n", nprocs);
 	printf("Mem Usage per MPI Rank (MB):  "); fancy_int(mem_tot);
@@ -217,7 +218,8 @@ void print_CLI_error(void)
 	printf("  -h <hash bins>           Number of hash bins (only relevant when used with \"-G hash\")\n");
 	printf("  -b <binary mode>         Read or write all data structures to file. If reading, this will skip initialization phase. (read, write)\n");
 	printf("  -k <kernel ID>           Specifies which kernel to run. 0 is baseline, 1, 2, etc are optimized variants. (0 is default.)\n");
-	printf("Default is equivalent to: -m history -s large -l 34 -p 500000 -G unionized\n");
+	printf("  -n <num. iterations>     Specifies how many kernel iterations to run. (1 is default.)\n");
+	printf("Default is equivalent to: -m history -s large -l 34 -p 500000 -G unionized -n 1\n");
 	printf("See readme for full description of default run values\n");
 	exit(4);
 }
@@ -255,6 +257,9 @@ Inputs read_CLI( int argc, char * argv[] )
 
 	// defaults to baseline kernel
 	input.kernel_id = 0;
+
+	// defaults to one kernel iteration
+	input.num_iterations = 1;
 
 	// defaults to H-M Large benchmark
 	input.HM = (char *) malloc( 6 * sizeof(char) );
@@ -393,6 +398,16 @@ Inputs read_CLI( int argc, char * argv[] )
 			else
 				print_CLI_error();
 		}
+		// number of kernel iterations (-n)
+		else if( strcmp(arg, "-n") == 0 )
+		{
+			if( ++i < argc )
+			{
+				input.kernel_id = atoi(argv[i]);
+			}
+			else
+			print_CLI_error();
+		}
 		else
 			print_CLI_error();
 	}
@@ -417,6 +432,10 @@ Inputs read_CLI( int argc, char * argv[] )
 
 	// Validate Hash Bins
 	if( input.hash_bins < 1 )
+		print_CLI_error();
+
+	// Validate number of iterations
+	if( input.num_iterations < 1 )
 		print_CLI_error();
 
 	// Validate HM size

@@ -3,13 +3,12 @@
 
 #include<stdio.h>
 #include<stdlib.h>
-#include<time.h>
 #include<string.h>
 #include<strings.h>
 #include<math.h>
 #include<omp.h>
 #include<unistd.h>
-#include<sys/time.h>
+#include<chrono>
 #include<assert.h>
 #include<stdint.h>
 
@@ -59,6 +58,7 @@ typedef struct{
 	int simulation_method;
 	int binary_mode;
 	int kernel_id;
+	int num_iterations;
 } Inputs;
 
 typedef Kokkos::View<int*> IntView;
@@ -98,6 +98,12 @@ typedef struct{
 	int length_mat_samples;
 } SimulationData;
 
+typedef struct{
+	double h2d_time;
+	double kernel_time;
+	double d2h_time;
+} Profile;
+
 // io.c
 void logo(int version);
 void center_print(const char *s, int width);
@@ -111,7 +117,7 @@ void binary_write( Inputs in, SimulationData SD );
 SimulationData binary_read( Inputs in );
 
 // Simulation.c
-unsigned long long run_event_based_simulation(Inputs in, SimulationData SD, int mype, double* end);
+unsigned long long run_event_based_simulation(Inputs in, SimulationData SD, int mype, double* end, Profile* profile);
 unsigned long long run_history_based_simulation(Inputs in, SimulationData SD, int mype);
 KOKKOS_INLINE_FUNCTION
 void calculate_micro_xs(   double p_energy, int nuc, long n_isotopes,
@@ -147,6 +153,7 @@ SimulationData grid_init_do_not_profile( Inputs in, int mype );
 int NGP_compare( const void * a, const void * b );
 int double_compare(const void * a, const void * b);
 size_t estimate_mem_usage( Inputs in );
+double get_time(void);
 
 // Materials.c
 int * load_num_nucs(long n_isotopes);
