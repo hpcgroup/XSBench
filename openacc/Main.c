@@ -68,6 +68,8 @@ int main( int argc, char* argv[] )
 		border_print();
 	}
 
+	Profile profile;
+
 	// Start Simulation Timer
 	omp_start = omp_get_wtime();
 
@@ -75,7 +77,7 @@ int main( int argc, char* argv[] )
 	if( in.simulation_method == EVENT_BASED )
 	{
 		if( in.kernel_id == 0 )
-			verification = run_event_based_simulation(in, SD, mype, &omp_end);
+			verification = run_event_based_simulation(in, SD, mype, &profile);
 		else
 		{
 			printf("Error: No kernel ID %d found!\n", in.kernel_id);
@@ -112,6 +114,12 @@ int main( int argc, char* argv[] )
 	#ifdef MPI
 	MPI_Finalize();
 	#endif
+
+	printf("host_to_device_ms,kernel_ms,device_to_host_ms\n");
+	printf("%f,%f,%f\n",
+	       profile.h2d_time*1000,
+	       profile.kernel_time*1000,
+	       profile.d2h_time*1000);
 
 	return is_invalid_result;
 }
