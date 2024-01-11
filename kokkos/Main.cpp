@@ -1,4 +1,3 @@
-// -*- c-basic-offset: 8; tab-width: 8; indent-tabs-mode: t; -*-
 #include "XSbench_header.hpp"
 
 #ifdef MPI
@@ -72,9 +71,8 @@ int main( int argc, char* argv[] )
 	}
 
 	// Start Simulation Timer
-    
-    double elapsed_time = 0;
-    
+	double elapsed_time = 0;
+
 	// Run simulation
 	if( in.simulation_method == EVENT_BASED )
 	{

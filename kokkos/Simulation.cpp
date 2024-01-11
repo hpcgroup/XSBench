@@ -1,4 +1,3 @@
-// -*- c-basic-offset: 8; tab-width: 8; indent-tabs-mode: t; -*-
 #include "XSbench_header.hpp"
 
 ////////////////////////////////////////////////////////////////////////////////////
@@ -38,8 +37,8 @@ unsigned long long run_event_based_simulation(Inputs in, SimulationData SD, int 
 	// Data movment and setup
 	int length_max_num_nucs = 1;
 
-    Kokkos::Timer start;
-    start.reset();
+	Kokkos::Timer start;
+	start.reset();
 
 	UIntView u_max_num_nucs(&SD.max_num_nucs, 1);
         SD.d_max_num_nucs = new IntView("d_max_num_nucs", length_max_num_nucs);
