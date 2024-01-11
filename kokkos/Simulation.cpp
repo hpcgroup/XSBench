@@ -91,7 +91,7 @@ unsigned long long run_event_based_simulation(Inputs in, SimulationData SD, int 
 	profile->h2d_time = get_time() - startP;
 
 	int nwarmups = in.num_iterations / 10;
-	for (int it = 0; it < in.num_iterations; it++) {
+	for (int it = 0; it < in.num_iterations + nwarmups; it++) {
 		if (it == nwarmups) {
 			Kokkos::fence();
 			startP = get_time();
