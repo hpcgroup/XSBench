@@ -19,7 +19,7 @@ using policy = RAJA::cuda_exec<256>;
 #endif
 
 
-unsigned long long run_event_based_simulation(Inputs in, SimulationData SD, int mype, double* end)
+unsigned long long run_event_based_simulation(Inputs in, SimulationData SD, int mype, double* end, Profile* profile)
 {
 	if( mype == 0)
 		printf("Beginning event based simulation...\n");
@@ -49,100 +49,113 @@ unsigned long long run_event_based_simulation(Inputs in, SimulationData SD, int 
 	//       number of bytes.
 	////////////////////////////////////////////////////////////////////////////////
 
+	double start = get_time();
 
-	////////////////////////////////////////////////////////////////////////////////
-	// Begin Actual Simulation Loop
-	////////////////////////////////////////////////////////////////////////////////
 	int* verifications = static_cast<int*>(allocator.allocate(in.lookups * sizeof(int)));
 	int* d_verifications = static_cast<int*>(d_allocator.allocate(in.lookups * sizeof(int)));
 	int i = 0;
 
-	printf("Requesting %d mem\n", SD.length_num_nucs * sizeof(int));
+	//printf("Requesting %d mem\n", SD.length_num_nucs * sizeof(int));
 	int* num_nucs = static_cast<int*>(d_allocator.allocate(SD.length_num_nucs * sizeof(int)));
 	rm.copy(num_nucs, SD.num_nucs);
 
-	printf("Requesting %d mem\n", SD.length_concs * sizeof(double));
+	//printf("Requesting %d mem\n", SD.length_concs * sizeof(double));
 	double* concs = static_cast<double*>(d_allocator.allocate(SD.length_concs * sizeof(double)));
 	rm.copy(concs, SD.concs);
 
-	printf("Requesting %d mem\n", SD.length_unionized_energy_array * sizeof(double));
+	//printf("Requesting %d mem\n", SD.length_unionized_energy_array * sizeof(double));
 	double* unionized_energy_array = static_cast<double*>(d_allocator.allocate(SD.length_unionized_energy_array * sizeof(double)));
 	rm.copy(unionized_energy_array, SD.unionized_energy_array);
 
-	printf("Requesting %d mem\n", SD.length_index_grid * sizeof(int));
+	//printf("Requesting %d mem\n", SD.length_index_grid * sizeof(int));
 	int* index_grid = static_cast<int*>(d_allocator.allocate(SD.length_index_grid * sizeof(int)));
 	rm.copy(index_grid, SD.index_grid);
 
-	printf("Requesting %d mem\n", SD.length_mats * sizeof(int));
+	//printf("Requesting %d mem\n", SD.length_mats * sizeof(int));
 	int* mats = static_cast<int*>(d_allocator.allocate(SD.length_mats * sizeof(int)));
 	rm.copy(mats, SD.mats);
 
-	printf("Requesting Nuclide %d mem\n", SD.length_nuclide_grid * sizeof(NuclideGridPoint));
+	//printf("Requesting Nuclide %d mem\n", SD.length_nuclide_grid * sizeof(NuclideGridPoint));
 	NuclideGridPoint* nuclide_grid = static_cast<NuclideGridPoint*>(d_allocator.allocate(SD.length_nuclide_grid * sizeof(NuclideGridPoint)));
 	rm.copy(nuclide_grid, SD.nuclide_grid);
 
-	RAJA::forall<policy>(RAJA::TypedRangeSegment<int>(0, in.lookups), [=] RAJA_DEVICE (int i) {
-		// Set the initial seed value
-		uint64_t seed = STARTING_SEED;
+	profile->h2d_time = get_time() - start;
 
-		// Forward seed to lookup index (we need 2 samples per lookup)
-		seed = fast_forward_LCG(seed, 2*i);
+	////////////////////////////////////////////////////////////////////////////////
+	// Begin Actual Simulation Loop
+	////////////////////////////////////////////////////////////////////////////////
 
-		// Randomly pick an energy and material for the particle
-		double p_energy = LCG_random_double(&seed);
-		int mat         = pick_mat(&seed);
+	int nwarmups = in.num_iterations / 10;
+	for (int it = 0; it < in.num_iterations + nwarmups; it++) {
+		if (it == nwarmups) start = get_time();
+		RAJA::forall<policy>(RAJA::TypedRangeSegment<int>(0, in.lookups), [=] RAJA_DEVICE (int i) {
+			// Set the initial seed value
+			uint64_t seed = STARTING_SEED;
 
-		double macro_xs_vector[5] = {0};
+			// Forward seed to lookup index (we need 2 samples per lookup)
+			seed = fast_forward_LCG(seed, 2*i);
 
-		// Perform macroscopic Cross Section Lookup
-		calculate_macro_xs(
-				p_energy,        // Sampled neutron energy (in lethargy)
-				mat,             // Sampled material type index neutron is in
-				in.n_isotopes,   // Total number of isotopes in simulation
-				in.n_gridpoints, // Number of gridpoints per isotope in simulation
-				num_nucs,     // 1-D array with number of nuclides per material
-				concs,        // Flattened 2-D array with concentration of each nuclide in each material
-				unionized_energy_array, // 1-D Unionized energy array
-				index_grid,   // Flattened 2-D grid holding indices into nuclide grid for each unionized energy level
-				nuclide_grid, // Flattened 2-D grid holding energy levels and XS_data for all nuclides in simulation
-				mats,         // Flattened 2-D array with nuclide indices defining composition of each type of material
-				macro_xs_vector, // 1-D array with result of the macroscopic cross section (5 different reaction channels)
-				in.grid_type,    // Lookup type (nuclide, hash, or unionized)
-				in.hash_bins,    // Number of hash bins used (if using hash lookup type)
-				SD.max_num_nucs  // Maximum number of nuclides present in any material
-				);
+			// Randomly pick an energy and material for the particle
+			double p_energy = LCG_random_double(&seed);
+			int mat         = pick_mat(&seed);
 
-		// For verification, and to prevent the compiler from optimizing
-		// all work out, we interrogate the returned macro_xs_vector array
-		// to find its maximum value index, then increment the verification
-		// value by that index. In this implementation, we prevent thread
-		// contention by using an OMP reduction on the verification value.
-		// For accelerators, a different approach might be required
-		// (e.g., atomics, reduction of thread-specific values in large
-		// array via CUDA thrust, etc).
-		double max = -1.0;
-		int max_idx = 0;
-		for(int j = 0; j < 5; j++ )
-		{
-			if( macro_xs_vector[j] > max )
+			double macro_xs_vector[5] = {0};
+
+			// Perform macroscopic Cross Section Lookup
+			calculate_macro_xs(
+					p_energy,        // Sampled neutron energy (in lethargy)
+					mat,             // Sampled material type index neutron is in
+					in.n_isotopes,   // Total number of isotopes in simulation
+					in.n_gridpoints, // Number of gridpoints per isotope in simulation
+					num_nucs,     // 1-D array with number of nuclides per material
+					concs,        // Flattened 2-D array with concentration of each nuclide in each material
+					unionized_energy_array, // 1-D Unionized energy array
+					index_grid,   // Flattened 2-D grid holding indices into nuclide grid for each unionized energy level
+					nuclide_grid, // Flattened 2-D grid holding energy levels and XS_data for all nuclides in simulation
+					mats,         // Flattened 2-D array with nuclide indices defining composition of each type of material
+					macro_xs_vector, // 1-D array with result of the macroscopic cross section (5 different reaction channels)
+					in.grid_type,    // Lookup type (nuclide, hash, or unionized)
+					in.hash_bins,    // Number of hash bins used (if using hash lookup type)
+					SD.max_num_nucs  // Maximum number of nuclides present in any material
+					);
+
+			// For verification, and to prevent the compiler from optimizing
+			// all work out, we interrogate the returned macro_xs_vector array
+			// to find its maximum value index, then increment the verification
+			// value by that index. In this implementation, we prevent thread
+			// contention by using an OMP reduction on the verification value.
+			// For accelerators, a different approach might be required
+			// (e.g., atomics, reduction of thread-specific values in large
+			// array via CUDA thrust, etc).
+			double max = -1.0;
+			int max_idx = 0;
+			for(int j = 0; j < 5; j++ )
 			{
-				max = macro_xs_vector[j];
-				max_idx = j;
+				if( macro_xs_vector[j] > max )
+				{
+					max = macro_xs_vector[j];
+					max_idx = j;
+				}
 			}
-		}
-	d_verifications[i] = max_idx + 1;
-	});
+			d_verifications[i] = max_idx + 1;
+		});
+	}
+	profile->kernel_time = get_time() - start;
 
-	// cudaDeviceSynchronize();
+	start = get_time();
+
 	// Copy back the verifications and do a sum to get the verification hash
 	rm.copy(verifications, d_verifications);
+
+	profile->d2h_time = get_time() - start;
+
 #ifdef ALIGNED_WORK
-    *end = get_time();
+	*end = get_time();
 #endif
 
 	unsigned long long verification_hash = 0;
 	for (std::size_t i = 0; i < in.lookups; i++) {
-	verification_hash += verifications[i];
+		verification_hash += verifications[i];
 	}
 	return verification_hash;
 }

@@ -73,6 +73,8 @@ int main( int argc, char* argv[] )
 		border_print();
 	}
 
+	Profile profile;
+
 	// Start Simulation Timer
 	omp_start = get_time();
 
@@ -80,7 +82,7 @@ int main( int argc, char* argv[] )
 	if( in.simulation_method == EVENT_BASED )
 	{
 		if( in.kernel_id == 0 )
-			verification = run_event_based_simulation(in, SD, mype, &omp_end);
+			verification = run_event_based_simulation(in, SD, mype, &profile);
 		else if( in.kernel_id == 1 )
 			verification = run_event_based_simulation_optimization_1(in, SD, mype);
 		else
@@ -119,6 +121,12 @@ int main( int argc, char* argv[] )
 	#ifdef AML
 	aml_finalize();
 	#endif
+
+	printf("host_to_device_ms,kernel_ms,device_to_host_ms\n");
+	printf("%f,%f,%f\n",
+	       profile.h2d_time*1000,
+	       profile.kernel_time*1000,
+	       profile.d2h_time*1000);
 
 	return is_invalid_result;
 }
