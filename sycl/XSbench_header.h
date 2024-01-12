@@ -9,7 +9,7 @@
 #include<math.h>
 #include<assert.h>
 #include<stdint.h>
-#include <chrono> 
+#include <chrono>
 #include <sycl/sycl.hpp>
 
 // Papi Header
@@ -56,6 +56,7 @@ typedef struct{
 	int simulation_method;
 	int binary_mode;
 	int kernel_id;
+	int num_warmups;
 } Inputs;
 
 typedef struct{
@@ -77,6 +78,12 @@ typedef struct{
 	int * mat_samples;
 	long length_mat_samples;
 } SimulationData;
+
+typedef struct{
+	double h2d_time;
+	double kernel_time;
+	double d2h_time;
+} Profile;
 
 // io.c
 void logo(int version);

@@ -13,7 +13,7 @@
 
 // use SYCL namespace to reduce symbol names
 using namespace sycl;
-unsigned long long run_event_based_simulation(Inputs in, SimulationData SD, int mype, double * kernel_init_time, double * stop)
+unsigned long long run_event_based_simulation(Inputs in, SimulationData SD, int mype, double * kernel_init_time, Profile* profile)
 {
 
 	////////////////////////////////////////////////////////////////////////////////
@@ -41,8 +41,9 @@ unsigned long long run_event_based_simulation(Inputs in, SimulationData SD, int 
 
 	// Timers
 	double start = get_time();
+	double startP = get_time();
 
-	// Scope here is important, as when we exit this blocl we will automatically sync with device
+	// Scope here is important, as when we exit this block we will automatically sync with device
 	// to ensure all work is done and that we can read from verification_host array.
 	{
 		// create a queue using the default device for the platform (cpu, gpu)
@@ -91,24 +92,38 @@ unsigned long long run_event_based_simulation(Inputs in, SimulationData SD, int 
 		////////////////////////////////////////////////////////////////////////////////
 
 		// queue a kernel to be run, as a lambda
-		sycl_q.submit([&](handler &cgh)
-				{
-				////////////////////////////////////////////////////////////////////////////////
-				// Create Device Accessors for Device Buffers
-				////////////////////////////////////////////////////////////////////////////////
-				auto num_nucs = num_nucs_d.get_access<access::mode::read>(cgh);
-				auto concs = concs_d.get_access<access::mode::read>(cgh);
-				auto mats = mats_d.get_access<access::mode::read>(cgh);
-				auto nuclide_grid = nuclide_grid_d.get_access<access::mode::read>(cgh);
-				auto verification = verification_d.get_access<access::mode::write>(cgh);
-				auto unionized_energy_array = unionized_energy_array_d.get_access<access::mode::read>(cgh);
-				auto index_grid = index_grid_d.get_access<access::mode::read>(cgh);
+		sycl_q.submit([&](handler &cgh) {
+			////////////////////////////////////////////////////////////////////////////////
+			// Create Device Accessors for Device Buffers
+			////////////////////////////////////////////////////////////////////////////////
+			auto num_nucs = num_nucs_d.get_access<access::mode::read>(cgh);
+			auto concs = concs_d.get_access<access::mode::read>(cgh);
+			auto mats = mats_d.get_access<access::mode::read>(cgh);
+			auto nuclide_grid = nuclide_grid_d.get_access<access::mode::read>(cgh);
+			auto verification = verification_d.get_access<access::mode::write>(cgh);
+			auto unionized_energy_array = unionized_energy_array_d.get_access<access::mode::read>(cgh);
+			auto index_grid = index_grid_d.get_access<access::mode::read>(cgh);
 
-				////////////////////////////////////////////////////////////////////////////////
-				// XS Lookup Simulation Loop
-				////////////////////////////////////////////////////////////////////////////////
-				cgh.parallel_for<kernel>(range<1>(in.lookups), [=](id<1> idx)
-					{
+			cgh.copy(SD.num_nucs              , num_nucs              );
+			cgh.copy(SD.concs                 , concs                 );
+			cgh.copy(SD.mats                  , mats                  );
+			cgh.copy(SD.nuclide_grid          , nuclide_grid          );
+			cgh.copy(SD.unionized_energy_array, unionized_energy_array);
+			cgh.copy(SD.index_grid            , index_grid            );
+			sycl_q.wait();
+
+			profile->h2d_time = get_time() - startP;
+
+			////////////////////////////////////////////////////////////////////////////////
+			// XS Lookup Simulation Loop
+			////////////////////////////////////////////////////////////////////////////////
+			int nwarmups = in.num_iterations / 10;
+			for (int it = 0; it < in.num_iterations + nwarmups; it++) {
+				if (it == nwarmups) {
+					sycl_q.wait();
+					startP = get_time();
+				}
+				cgh.parallel_for<kernel>(range<1>(in.lookups), [=](id<1> idx) {
 					// get the index to operate on, first dimemsion
 					size_t i = idx[0];
 
@@ -162,11 +177,19 @@ unsigned long long run_event_based_simulation(Inputs in, SimulationData SD, int 
 					}
 					verification[i] = max_idx+1;
 
-					});
 				});
+			}
+			sycl_q.wait();
+			profile->kernel_time = get_time() - startP;
+
+			startP = get_time();
+			cgh.copy(verification, SD.verification);
+			sycl_q.wait();
+			profile->d2h_time = get_time() - startP;
+		});
 		*kernel_init_time = get_time();
-		if(mype==0) printf("Kernel initialization, compilation, and launch took %.2lf seconds.\n", *kernel_init_time-start);
-		if(mype==0) printf("Beginning event based simulation...\n");
+		//if(mype==0) printf("Kernel initialization, compilation, and launch took %.2lf seconds.\n", *kernel_init_time-start);
+		//if(mype==0) printf("Beginning event based simulation...\n");
 	}
 
 #ifdef ALIGNED_WORK
