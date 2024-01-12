@@ -9,15 +9,15 @@ SimulationData grid_init_do_not_profile( Inputs in, int mype )
 	size_t nbytes = 0;
 
 	// Set the initial seed value
-	uint64_t seed = 42;	
+	uint64_t seed = 42;
 
-	// loop variable 
+	// loop variable
 	long e = 0;
-	
+
 	////////////////////////////////////////////////////////////////////
 	// Initialize Nuclide Grids
 	////////////////////////////////////////////////////////////////////
-	
+
 	if(mype == 0) printf("Intializing nuclide grids...\n");
 
 	auto& rm = umpire::ResourceManager::getInstance();
@@ -26,15 +26,15 @@ SimulationData grid_init_do_not_profile( Inputs in, int mype )
 
 	// First, we need to initialize our nuclide grid. This comes in the form
 	// of a flattened 2D array that hold all the information we need to define
-	// the cross sections for all isotopes in the simulation. 
+	// the cross sections for all isotopes in the simulation.
 	// The grid is composed of "NuclideGridPoint" structures, which hold the
 	// energy level of the grid point and all associated XS data at that level.
 	// An array of structures (AOS) is used instead of
-	// a structure of arrays, as the grid points themselves are accessed in 
+	// a structure of arrays, as the grid points themselves are accessed in
 	// a random order, but all cross section interaction channels and the
 	// energy level are read whenever the gridpoint is accessed, meaning the
 	// AOS is more cache efficient.
-	
+
 	// Initialize Nuclide Grid
 	SD.length_nuclide_grid = in.n_isotopes * in.n_gridpoints;
 	SD.nuclide_grid = static_cast<NuclideGridPoint*>(allocator.allocate(SD.length_nuclide_grid * sizeof(NuclideGridPoint)));
@@ -53,7 +53,7 @@ SimulationData grid_init_do_not_profile( Inputs in, int mype )
 	// Sort so that each nuclide has data stored in ascending energy order.
 	for( int i = 0; i < in.n_isotopes; i++ )
 		qsort( &SD.nuclide_grid[i*in.n_gridpoints], in.n_gridpoints, sizeof(NuclideGridPoint), NGP_compare);
-	
+
 	// error debug check
 	/*
 	for( int i = 0; i < in.n_isotopes; i++ )
@@ -63,18 +63,18 @@ SimulationData grid_init_do_not_profile( Inputs in, int mype )
 			printf("E%d = %lf\n", j, SD.nuclide_grid[i * in.n_gridpoints + j].energy);
 	}
 	*/
-	
+
 
 	////////////////////////////////////////////////////////////////////
 	// Initialize Acceleration Structure
 	////////////////////////////////////////////////////////////////////
-	
+
 	if( in.grid_type == NUCLIDE )
 	{
 		SD.length_unionized_energy_array = 0;
 		SD.length_index_grid = 0;
 	}
-	
+
 	if( in.grid_type == UNIONIZED )
 	{
 		if(mype == 0) printf("Intializing unionized grid...\n");
@@ -120,7 +120,7 @@ SimulationData grid_init_do_not_profile( Inputs in, int mype )
 				{
 					idx_low[i]++;
 					SD.index_grid[e * in.n_isotopes + i] = idx_low[i];
-					energy_high[i] = SD.nuclide_grid[i * in.n_gridpoints + idx_low[i] + 1].energy;	
+					energy_high[i] = SD.nuclide_grid[i * in.n_gridpoints + idx_low[i] + 1].energy;
 				}
 			}
 		}
@@ -158,7 +158,7 @@ SimulationData grid_init_do_not_profile( Inputs in, int mype )
 	// Initialize Materials and Concentrations
 	////////////////////////////////////////////////////////////////////
 	if(mype == 0) printf("Intializing material data...\n");
-	
+
 	// Set the number of nuclides in each material
 	SD.num_nucs  = load_num_nucs(in.n_isotopes);
 	SD.length_num_nucs = 12; // There are always 12 materials in XSBench
@@ -228,7 +228,7 @@ SimulationData grid_init_do_not_profile( Inputs in, int mype )
 	nbytes += (SD.nuclide_grid_replica)->n * (SD.nuclide_grid_replica)->size;
 	aml_replicaset_init(SD.nuclide_grid_replica, SD.nuclide_grid);
 #endif
-	
+
 	if(mype == 0) printf("Intialization complete. Allocated %.0lf MB of data.\n", nbytes/1024.0/1024.0 );
 	return SD;
 }

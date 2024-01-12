@@ -30,7 +30,7 @@ int main( int argc, char* argv[] )
 
 	// Set number of OpenMP Threads
 	#ifdef OPENMP
-	omp_set_num_threads(in.nthreads); 
+	omp_set_num_threads(in.nthreads);
 	#endif
 
 	// Print-out of Input Summary
@@ -42,7 +42,7 @@ int main( int argc, char* argv[] )
 	// This is not reflective of a real Monte Carlo simulation workload,
 	// therefore, do not profile this region!
 	// =====================================================================
-	
+
 	SimulationData SD;
 
 	// If read from file mode is selected, skip initialization and load
@@ -60,7 +60,7 @@ int main( int argc, char* argv[] )
 
 	// =====================================================================
 	// Cross Section (XS) Parallel Lookup Simulation
-	// This is the section that should be profiled, as it reflects a 
+	// This is the section that should be profiled, as it reflects a
 	// realistic continuous energy Monte Carlo macroscopic cross section
 	// lookup kernel.
 	// =====================================================================
@@ -92,8 +92,8 @@ int main( int argc, char* argv[] )
 	else
 		verification = run_history_based_simulation(in, SD, mype);
 
-	if( mype == 0)	
-	{	
+	if( mype == 0)
+	{
 		printf("\n" );
 		printf("Simulation complete.\n" );
 	}
