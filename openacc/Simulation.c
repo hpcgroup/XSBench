@@ -57,8 +57,8 @@ unsigned long long run_event_based_simulation(Inputs in, SimulationData SD, int 
 	profile->h2d_time = get_time() - start;
 
 	int nwarmups = in.num_iterations / 10;
-	for (int i = 0; i < in.num_iterations + nwarmups; i++) {
-		if (i == nwarmups) start = get_time();
+	for (int it = 0; it < in.num_iterations + nwarmups; it++) {
+		if (it == nwarmups) start = get_time();
 		#pragma acc parallel loop
 		for( int i = 0; i < in.lookups; i++ )
 		{
