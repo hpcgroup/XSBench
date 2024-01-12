@@ -45,3 +45,19 @@ size_t estimate_mem_usage( Inputs in )
 	memtotal          = ceil(memtotal / (1024.0*1024.0));
 	return memtotal;
 }
+
+double get_time(void)
+{
+#ifdef MPI
+	return MPI_Wtime();
+#endif
+
+	struct timeval timecheck;
+
+	gettimeofday(&timecheck, NULL);
+	long ms = (long)timecheck.tv_sec * 1000 + (long)timecheck.tv_usec / 1000;
+
+	double time = (double) ms / 1000.0;
+
+	return time;
+}
