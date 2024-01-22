@@ -78,7 +78,7 @@ int main( int argc, char* argv[] )
 	{
 		if( in.kernel_id == 0 )
 		{
-			verification = run_event_based_simulation(in, SD, mype, &kernel_init_time, &omp_end);
+			verification = run_event_based_simulation(in, SD, mype, &kernel_init_time);
 		}
 		else
 		{
@@ -88,7 +88,7 @@ int main( int argc, char* argv[] )
 	}
 	else
 	{
-		printf("History-based simulation not implemented in OpenMP offload code. Instead,\nuse the event-based method with \"-m event\" argument.\n");
+		printf("History-based simulation not implemented in SYCL. Instead,\nuse the event-based method with \"-m event\" argument.\n");
 		exit(1);
 	}
 
