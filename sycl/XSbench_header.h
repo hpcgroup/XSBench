@@ -36,46 +36,46 @@
 
 // Structures
 typedef struct{
-	double energy;
-	double total_xs;
-	double elastic_xs;
-	double absorbtion_xs;
-	double fission_xs;
-	double nu_fission_xs;
+        double energy;
+        double total_xs;
+        double elastic_xs;
+        double absorbtion_xs;
+        double fission_xs;
+        double nu_fission_xs;
 } NuclideGridPoint;
 
 typedef struct{
-	int nthreads;
-	long n_isotopes;
-	long n_gridpoints;
-	int lookups;
-	char * HM;
-	int grid_type; // 0: Unionized Grid (default)    1: Nuclide Grid
-	int hash_bins;
-	int particles;
-	int simulation_method;
-	int binary_mode;
-	int kernel_id;
+        int nthreads;
+        long n_isotopes;
+        long n_gridpoints;
+        int lookups;
+        char * HM;
+        int grid_type; // 0: Unionized Grid (default)    1: Nuclide Grid
+        int hash_bins;
+        int particles;
+        int simulation_method;
+        int binary_mode;
+        int kernel_id;
 } Inputs;
 
 typedef struct{
-	int * num_nucs;                     // Length = length_num_nucs;
-	double * concs;                     // Length = length_concs
-	int * mats;                         // Length = length_mats
-	double * unionized_energy_array;    // Length = length_unionized_energy_array
-	int * index_grid;                   // Length = length_index_grid
-	NuclideGridPoint * nuclide_grid;    // Length = length_nuclide_grid
-	long length_num_nucs;
-	long length_concs;
-	long length_mats;
-	long length_unionized_energy_array;
-	long length_index_grid;
-	long length_nuclide_grid;
-	int max_num_nucs;
-	double * p_energy_samples;
-	long length_p_energy_samples;
-	int * mat_samples;
-	long length_mat_samples;
+        int * num_nucs;                     // Length = length_num_nucs;
+        double * concs;                     // Length = length_concs
+        int * mats;                         // Length = length_mats
+        double * unionized_energy_array;    // Length = length_unionized_energy_array
+        int * index_grid;                   // Length = length_index_grid
+        NuclideGridPoint * nuclide_grid;    // Length = length_nuclide_grid
+        long length_num_nucs;
+        long length_concs;
+        long length_mats;
+        long length_unionized_energy_array;
+        long length_index_grid;
+        long length_nuclide_grid;
+        int max_num_nucs;
+        double * p_energy_samples;
+        long length_p_energy_samples;
+        int * mat_samples;
+        long length_mat_samples;
 } SimulationData;
 
 // io.c
@@ -91,7 +91,7 @@ void binary_write( Inputs in, SimulationData SD );
 SimulationData binary_read( Inputs in );
 
 // Simulation.c
-unsigned long long run_event_based_simulation(Inputs in, SimulationData SD, int mype, double * kernel_init_time, double * stop);
+unsigned long long run_event_based_simulation(Inputs in, SimulationData SD, int mype, double * kernel_init_time);
 int pick_mat(unsigned long * seed);
 double LCG_random_double(uint64_t * seed);
 uint64_t fast_forward_LCG(uint64_t seed, uint64_t n);
@@ -99,21 +99,22 @@ template <class T>
 long grid_search( long n, double quarry, T A);
 template <class Double_Type, class Int_Type, class NGP_Type>
 void calculate_micro_xs(   double p_energy, int nuc, long n_isotopes,
-		long n_gridpoints,
-		Double_Type  egrid, Int_Type  index_data,
-		NGP_Type  nuclide_grids,
-		long idx, double *  xs_vector, int grid_type, int hash_bins );
+                        long n_gridpoints,
+                        Double_Type  egrid, Int_Type  index_data,
+                        NGP_Type  nuclide_grids,
+                        long idx, double *  xs_vector, int grid_type, int hash_bins );
 template <class Double_Type, class Int_Type, class NGP_Type, class E_GRID_TYPE, class INDEX_TYPE>
 void calculate_macro_xs( double p_energy, int mat, long n_isotopes,
-		long n_gridpoints, Int_Type  num_nucs,
-		Double_Type  concs,
-		E_GRID_TYPE  egrid, INDEX_TYPE  index_data,
-		NGP_Type  nuclide_grids,
-		Int_Type  mats,
-		double * macro_xs_vector, int grid_type, int hash_bins, int max_num_nucs );
+                        long n_gridpoints, Int_Type  num_nucs,
+                        Double_Type  concs,
+                        E_GRID_TYPE  egrid, INDEX_TYPE  index_data,
+                        NGP_Type  nuclide_grids,
+                        Int_Type  mats,
+                        double * macro_xs_vector, int grid_type, int hash_bins, int max_num_nucs );
 
 // GridInit.c
 SimulationData grid_init_do_not_profile( Inputs in, int mype );
+void release_memory(SimulationData SD);
 
 // XSutils.c
 int NGP_compare( const void * a, const void * b );
@@ -132,23 +133,23 @@ double * load_concs( int * num_nucs, int max_num_nucs );
 template <class T>
 long grid_search_nuclide( long n, double quarry, T A, long low, long high)
 {
-	long lowerLimit = low;
-	long upperLimit = high;
-	long examinationPoint;
-	long length = upperLimit - lowerLimit;
+        long lowerLimit = low;
+        long upperLimit = high;
+        long examinationPoint;
+        long length = upperLimit - lowerLimit;
 
-	while( length > 1 )
-	{
-		examinationPoint = lowerLimit + ( length / 2 );
+        while( length > 1 )
+        {
+                examinationPoint = lowerLimit + ( length / 2 );
 
-		if( A[examinationPoint].energy > quarry )
-			upperLimit = examinationPoint;
-		else
-			lowerLimit = examinationPoint;
+                if( A[examinationPoint].energy > quarry )
+                        upperLimit = examinationPoint;
+                        else
+                        lowerLimit = examinationPoint;
 
-		length = upperLimit - lowerLimit;
-	}
+                length = upperLimit - lowerLimit;
+        }
 
-	return lowerLimit;
+        return lowerLimit;
 }
 #endif
