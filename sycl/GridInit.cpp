@@ -169,10 +169,22 @@ SimulationData grid_init_do_not_profile( Inputs in, int mype )
 	SD.concs = load_concs(SD.num_nucs, SD.max_num_nucs);
 	SD.length_concs = SD.length_mats;
 
+
+    if( SD.length_unionized_energy_array == 0 )
+    {
+        SD.length_unionized_energy_array = 1;
+        SD.unionized_energy_array = (double *) malloc(sizeof(double));
+    }
+    
+    if( SD.length_index_grid == 0 )
+    {
+        SD.length_index_grid = 1;
+        SD.index_grid = (int *) malloc(sizeof(int));
+    }
+
 	if(mype == 0) printf("Intialization complete. Allocated %.0lf MB of data.\n", nbytes/1024.0/1024.0 );
 
 	return SD;
-
 }
 
 void release_memory(SimulationData SD) {
