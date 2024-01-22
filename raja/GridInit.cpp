@@ -29,47 +29,47 @@ SimulationData move_simulation_data_to_device( Inputs in, int mype, SimulationDa
 	// Shallow copy of CPU simulation data to GPU simulation data
 	SimulationData GSD = SD;
 
-    auto& rm = umpire::ResourceManager::getInstance();
+	auto& rm = umpire::ResourceManager::getInstance();
 	umpire::Allocator allocator = rm.getAllocator("DEVICE");
 
 	// Move data to GPU memory space
 	sz = GSD.length_num_nucs * sizeof(int);
-    GSD.num_nucs = static_cast<int*>(allocator.allocate(sz));
-    rm.copy(GSD.num_nucs, SD.num_nucs);
+	GSD.num_nucs = static_cast<int*>(allocator.allocate(sz));
+	rm.copy(GSD.num_nucs, SD.num_nucs);
 	total_sz += sz;
 
 	sz = GSD.length_concs * sizeof(double);
-    GSD.concs = static_cast<double*>(allocator.allocate(sz));
-    rm.copy(GSD.concs, SD.concs);
+	GSD.concs = static_cast<double*>(allocator.allocate(sz));
+	rm.copy(GSD.concs, SD.concs);
 	total_sz += sz;
 
 	sz = GSD.length_mats * sizeof(int);
-    GSD.mats = static_cast<int*>(allocator.allocate(sz));
-    rm.copy(GSD.mats, SD.mats);
+	GSD.mats = static_cast<int*>(allocator.allocate(sz));
+	rm.copy(GSD.mats, SD.mats);
 	total_sz += sz;
-	
+
 	sz = GSD.length_unionized_energy_array * sizeof(double);
-    GSD.unionized_energy_array = static_cast<double*>(allocator.allocate(sz));
-    rm.copy(GSD.unionized_energy_array, SD.unionized_energy_array);
+	GSD.unionized_energy_array = static_cast<double*>(allocator.allocate(sz));
+	rm.copy(GSD.unionized_energy_array, SD.unionized_energy_array);
 	total_sz += sz;
 
 	sz = GSD.length_index_grid * sizeof(int);
-    GSD.index_grid = static_cast<int*>(allocator.allocate(sz));
-    rm.copy(GSD.index_grid, SD.index_grid);
+	GSD.index_grid = static_cast<int*>(allocator.allocate(sz));
+	rm.copy(GSD.index_grid, SD.index_grid);
 	total_sz += sz;
 
 	sz = GSD.length_nuclide_grid * sizeof(NuclideGridPoint);
-    GSD.nuclide_grid = static_cast<NuclideGridPoint*>(allocator.allocate(sz));
-    rm.copy(GSD.nuclide_grid, SD.nuclide_grid);
+	GSD.nuclide_grid = static_cast<NuclideGridPoint*>(allocator.allocate(sz));
+	rm.copy(GSD.nuclide_grid, SD.nuclide_grid);
 	total_sz += sz;
-	
+
 	// Allocate verification array on device. This structure is not needed on CPU, so we don't
 	// have to copy anything over.
 	sz = in.lookups * sizeof(unsigned long);
-    GSD.verification = static_cast<unsigned long *>(allocator.allocate(sz));
+	GSD.verification = static_cast<unsigned long *>(allocator.allocate(sz));
 	total_sz += sz;
 	GSD.length_verification = in.lookups;
-	
+
 	if(mype == 0 ) printf("GPU Intialization complete. Allocated %.0lf MB of data on GPU.\n", total_sz/1024.0/1024.0 );
 
 	return GSD;
@@ -78,7 +78,7 @@ SimulationData move_simulation_data_to_device( Inputs in, int mype, SimulationDa
 
 // Release device memory
 void release_device_memory(SimulationData GSD) {
-    auto& rm = umpire::ResourceManager::getInstance();
+	auto& rm = umpire::ResourceManager::getInstance();
 	umpire::Allocator allocator = rm.getAllocator("DEVICE");	
 
 	allocator.deallocate(GSD.num_nucs);
@@ -90,7 +90,7 @@ void release_device_memory(SimulationData GSD) {
 }
 
 void release_memory(SimulationData SD) {
-    auto& rm = umpire::ResourceManager::getInstance();
+	auto& rm = umpire::ResourceManager::getInstance();
 	umpire::Allocator allocator = rm.getAllocator("HOST");	
 
 	allocator.deallocate(SD.num_nucs);
@@ -108,14 +108,14 @@ SimulationData grid_init_do_not_profile( Inputs in, int mype )
 
 	// Keep track of how much data we're allocating
 	size_t nbytes = 0;
-	
+
 	// Set the initial seed value
 	uint64_t seed = 42;	
 
 	////////////////////////////////////////////////////////////////////
 	// Initialize Nuclide Grids
 	////////////////////////////////////////////////////////////////////
-	
+
 	if(mype == 0) printf("Intializing nuclide grids...\n");
 
 	// First, we need to initialize our nuclide grid. This comes in the form
@@ -128,10 +128,10 @@ SimulationData grid_init_do_not_profile( Inputs in, int mype )
 	// a random order, but all cross section interaction channels and the
 	// energy level are read whenever the gridpoint is accessed, meaning the
 	// AOS is more cache efficient.
-    
-    auto& rm = umpire::ResourceManager::getInstance();
+
+	auto& rm = umpire::ResourceManager::getInstance();
 	umpire::Allocator allocator = rm.getAllocator("HOST");
-	
+
 	// Initialize Nuclide Grid
 	SD.length_nuclide_grid = in.n_isotopes * in.n_gridpoints;
 	SD.nuclide_grid     = static_cast<NuclideGridPoint *>(allocator.allocate( SD.length_nuclide_grid * sizeof(NuclideGridPoint)));
@@ -150,7 +150,7 @@ SimulationData grid_init_do_not_profile( Inputs in, int mype )
 	// Sort so that each nuclide has data stored in ascending energy order.
 	for( int i = 0; i < in.n_isotopes; i++ )
 		qsort( &SD.nuclide_grid[i*in.n_gridpoints], in.n_gridpoints, sizeof(NuclideGridPoint), NGP_compare);
-	
+
 	// error debug check
 	/*
 	for( int i = 0; i < in.n_isotopes; i++ )
@@ -160,18 +160,18 @@ SimulationData grid_init_do_not_profile( Inputs in, int mype )
 			printf("E%d = %lf\n", j, SD.nuclide_grid[i * in.n_gridpoints + j].energy);
 	}
 	*/
-	
+
 
 	////////////////////////////////////////////////////////////////////
 	// Initialize Acceleration Structure
 	////////////////////////////////////////////////////////////////////
-	
+
 	if( in.grid_type == NUCLIDE )
 	{
 		SD.length_unionized_energy_array = 0;
 		SD.length_index_grid = 0;
 	}
-	
+
 	if( in.grid_type == UNIONIZED )
 	{
 		if(mype == 0) printf("Intializing unionized grid...\n");
@@ -211,10 +211,10 @@ SimulationData grid_init_do_not_profile( Inputs in, int mype )
 			{
 				if( unionized_energy < energy_high[i]  )
 					SD.index_grid[e * in.n_isotopes + i] = idx_low[i];
-				else if( idx_low[i] == in.n_gridpoints - 2 )
+					else if( idx_low[i] == in.n_gridpoints - 2 )
 					SD.index_grid[e * in.n_isotopes + i] = idx_low[i];
-				else
-				{
+					else
+					{
 					idx_low[i]++;
 					SD.index_grid[e * in.n_isotopes + i] = idx_low[i];
 					energy_high[i] = SD.nuclide_grid[i * in.n_gridpoints + idx_low[i] + 1].energy;	
@@ -255,7 +255,7 @@ SimulationData grid_init_do_not_profile( Inputs in, int mype )
 	// Initialize Materials and Concentrations
 	////////////////////////////////////////////////////////////////////
 	if(mype == 0) printf("Intializing material data...\n");
-	
+
 	// Set the number of nuclides in each material
 	SD.num_nucs  = load_num_nucs(in.n_isotopes);
 	SD.length_num_nucs = 12; // There are always 12 materials in XSBench
@@ -275,7 +275,7 @@ SimulationData grid_init_do_not_profile( Inputs in, int mype )
 	SD.length_concs = SD.length_mats;
 
 
-    SD.verification = static_cast<unsigned long *>(allocator.allocate(in.lookups * sizeof(unsigned long)));
+	SD.verification = static_cast<unsigned long *>(allocator.allocate(in.lookups * sizeof(unsigned long)));
 	nbytes += in.lookups * sizeof(unsigned long);
 	SD.length_verification = in.lookups;
 
