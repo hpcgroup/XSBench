@@ -69,8 +69,8 @@ int main( int argc, char* argv[] )
 		border_print();
 	}
 
-	// Start Simulation Timer
-	omp_start = omp_get_wtime();
+    // Start Simulation Timer
+	omp_start = get_time();
 
 	// Run simulation
 	if( in.simulation_method == EVENT_BASED )
@@ -95,10 +95,8 @@ int main( int argc, char* argv[] )
 		printf("Simulation complete.\n" );
 	}
 
-	// End Simulation Timer
-#ifndef ALIGNED_WORK
-	omp_end = omp_get_wtime();
-#endif
+    // End Simulation Timer
+	omp_end = get_time();
 
 	// =====================================================================
 	// Output Results & Finalize
