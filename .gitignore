@@ -5,6 +5,7 @@ KokkosCore_*
 kokkos/desul
 *.a
 XSBench
+*[Bb][Uu][Ii][Ll][Dd]*
 */XSBench
 *.cpp1*
 *.cpp4*
