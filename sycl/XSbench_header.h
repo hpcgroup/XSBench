@@ -9,8 +9,8 @@
 #include<math.h>
 #include<assert.h>
 #include<stdint.h>
-#include <chrono> 
-#include <sycl/sycl.hpp>
+#include<chrono>
+#include<sycl/sycl.hpp>
 
 // Papi Header
 #ifdef PAPI
@@ -56,6 +56,7 @@ typedef struct{
         int simulation_method;
         int binary_mode;
         int kernel_id;
+	int num_iterations;
 } Inputs;
 
 typedef struct{
@@ -78,6 +79,12 @@ typedef struct{
         long length_mat_samples;
 } SimulationData;
 
+typedef struct{
+	double h2d_time;
+	double kernel_time;
+	double d2h_time;
+} Profile;
+
 // io.c
 void logo(int version);
 void center_print(const char *s, int width);
@@ -91,7 +98,7 @@ void binary_write( Inputs in, SimulationData SD );
 SimulationData binary_read( Inputs in );
 
 // Simulation.c
-unsigned long long run_event_based_simulation(Inputs in, SimulationData SD, int mype, double * kernel_init_time);
+unsigned long long run_event_based_simulation(Inputs in, SimulationData SD, int mype, double * kernel_init_time, Profile* profile);
 int pick_mat(unsigned long * seed);
 double LCG_random_double(uint64_t * seed);
 uint64_t fast_forward_LCG(uint64_t seed, uint64_t n);

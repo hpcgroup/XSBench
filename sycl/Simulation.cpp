@@ -12,7 +12,7 @@
 ////////////////////////////////////////////////////////////////////////////////////
 
 // use SYCL namespace to reduce symbol names
-unsigned long long run_event_based_simulation(Inputs in, SimulationData SD, int mype, double * kernel_init_time) {
+unsigned long long run_event_based_simulation(Inputs in, SimulationData SD, int mype, double * kernel_init_time, Profile* profile) {
 
         ////////////////////////////////////////////////////////////////////////////////
         // SUMMARY: Simulation Data Structure Manifest for "SD" Object
@@ -60,6 +60,17 @@ unsigned long long run_event_based_simulation(Inputs in, SimulationData SD, int 
         sycl::buffer<NuclideGridPoint> nuclide_grid_d(SD.nuclide_grid, SD.length_nuclide_grid);
         sycl::buffer<int> verification_d(verification_host, in.lookups);
 
+	double startP = get_time();
+	// copy data to device
+	sycl_q.copy(SD.num_nucs, num_nucs_d, SD.length_num_nucs);
+	sycl_q.copy(SD.concs, concs_d, SD.length_concs);
+	sycl_q.copy(SD.mats, mats_d, SD.length_mats);
+	sycl_q.copy(SD.unionized_energy_array, unionized_energy_array_d, SD.length_unionized_energy_array);
+	sycl_q.copy(SD.index_grid, index_grid_d, SD.length_index_grid);
+	sycl_q.copy(SD.nuclide_grid, nuclide_grid_d, SD.length_nuclide_grid);
+	sycl_q.wait();
+	profile->h2d_time = get_time() - startP;
+
 
         ////////////////////////////////////////////////////////////////////////////////
         // Define Device Kernel
@@ -67,83 +78,98 @@ unsigned long long run_event_based_simulation(Inputs in, SimulationData SD, int 
 
         if(mype==0) printf("Beginning event based simulation...\n");
 
-        // queue a kernel to be run, as a lambda
-        sycl_q.submit([&](sycl::handler &cgh) {
-                ////////////////////////////////////////////////////////////////////////////////
-                // Create Device Accessors for Device Buffers
-                ////////////////////////////////////////////////////////////////////////////////
-                sycl::accessor num_nucs {num_nucs_d, cgh, sycl::read_only};
-                sycl::accessor concs {concs_d, cgh, sycl::read_only};
-                sycl::accessor mats {mats_d, cgh, sycl::read_only};
-                sycl::accessor unionized_energy_array {unionized_energy_array_d, cgh, sycl::read_only};
-                sycl::accessor index_grid {index_grid_d, cgh, sycl::read_only};
-                sycl::accessor nuclide_grid {nuclide_grid_d, cgh, sycl::read_only};
-                sycl::accessor verification {verification_d, cgh, sycl::write_only, sycl::no_init};
+	int nwarmups = in.num_iterations / 10;
+	startP = 0.0;
+	for (int it = 0; it < in.num_iterations + nwarmups; it++) {
+		if (it == nwarmups) {
+			startP = get_time();
+			sycl_q.wait();
+		}
+		// queue a kernel to be run, as a lambda
+		sycl_q.submit([&](sycl::handler &cgh) {
+			////////////////////////////////////////////////////////////////////////////////
+			// Create Device Accessors for Device Buffers
+			////////////////////////////////////////////////////////////////////////////////
+			sycl::accessor num_nucs {num_nucs_d, cgh, sycl::read_only};
+			sycl::accessor concs {concs_d, cgh, sycl::read_only};
+			sycl::accessor mats {mats_d, cgh, sycl::read_only};
+			sycl::accessor unionized_energy_array {unionized_energy_array_d, cgh, sycl::read_only};
+			sycl::accessor index_grid {index_grid_d, cgh, sycl::read_only};
+			sycl::accessor nuclide_grid {nuclide_grid_d, cgh, sycl::read_only};
+			sycl::accessor verification {verification_d, cgh, sycl::write_only, sycl::no_init};
 
-                ////////////////////////////////////////////////////////////////////////////////
-                // XS Lookup Simulation Loop
-                ////////////////////////////////////////////////////////////////////////////////
-                cgh.parallel_for<sycl::kernel>(sycl::range<1>(in.lookups), [=](sycl::id<1> idx) {
-                        // get the index to operate on, first dimemsion
-                        size_t i = idx[0];
+			////////////////////////////////////////////////////////////////////////////////
+			// XS Lookup Simulation Loop
+			////////////////////////////////////////////////////////////////////////////////
+			cgh.parallel_for<sycl::kernel>(sycl::range<1>(in.lookups), [=](sycl::id<1> idx) {
+				// get the index to operate on, first dimemsion
+				size_t i = idx[0];
 
-                        // Set the initial seed value
-                        uint64_t seed = STARTING_SEED;	
+				// Set the initial seed value
+				uint64_t seed = STARTING_SEED;	
 
-                        // Forward seed to lookup index (we need 2 samples per lookup)
-                        seed = fast_forward_LCG(seed, 2*i);
+				// Forward seed to lookup index (we need 2 samples per lookup)
+				seed = fast_forward_LCG(seed, 2*i);
 
-                        // Randomly pick an energy and material for the particle
-                        double p_energy = LCG_random_double(&seed);
-                        int mat         = pick_mat(&seed); 
+				// Randomly pick an energy and material for the particle
+				double p_energy = LCG_random_double(&seed);
+				int mat         = pick_mat(&seed); 
 
-                        // debugging
-                        //printf("E = %lf mat = %d\n", p_energy, mat);
+				// debugging
+				//printf("E = %lf mat = %d\n", p_energy, mat);
 
-                        double macro_xs_vector[5] = {0};
+				double macro_xs_vector[5] = {0};
 
-                        // Perform macroscopic Cross Section Lookup
-                        calculate_macro_xs(
-                                p_energy,        // Sampled neutron energy (in lethargy)
-                                mat,             // Sampled material type index neutron is in
-                                in.n_isotopes,   // Total number of isotopes in simulation
-                                in.n_gridpoints, // Number of gridpoints per isotope in simulation
-                                num_nucs,     // 1-D array with number of nuclides per material
-                                concs,        // Flattened 2-D array with concentration of each nuclide in each material
-                                unionized_energy_array, // 1-D Unionized energy array
-                                index_grid,   // Flattened 2-D grid holding indices into nuclide grid for each unionized energy level
-                                nuclide_grid, // Flattened 2-D grid holding energy levels and XS_data for all nuclides in simulation
-                                mats,         // Flattened 2-D array with nuclide indices defining composition of each type of material
-                                macro_xs_vector, // 1-D array with result of the macroscopic cross section (5 different reaction channels)
-                                in.grid_type,    // Lookup type (nuclide, hash, or unionized)
-                                in.hash_bins,    // Number of hash bins used (if using hash lookup type)
-                                SD.max_num_nucs  // Maximum number of nuclides present in any material
-                        );
+				// Perform macroscopic Cross Section Lookup
+				calculate_macro_xs(
+				    p_energy,        // Sampled neutron energy (in lethargy)
+				    mat,             // Sampled material type index neutron is in
+				    in.n_isotopes,   // Total number of isotopes in simulation
+				    in.n_gridpoints, // Number of gridpoints per isotope in simulation
+				    num_nucs,     // 1-D array with number of nuclides per material
+				    concs,        // Flattened 2-D array with concentration of each nuclide in each material
+				    unionized_energy_array, // 1-D Unionized energy array
+				    index_grid,   // Flattened 2-D grid holding indices into nuclide grid for each unionized energy level
+				    nuclide_grid, // Flattened 2-D grid holding energy levels and XS_data for all nuclides in simulation
+				    mats,         // Flattened 2-D array with nuclide indices defining composition of each type of material
+				    macro_xs_vector, // 1-D array with result of the macroscopic cross section (5 different reaction channels)
+				    in.grid_type,    // Lookup type (nuclide, hash, or unionized)
+				    in.hash_bins,    // Number of hash bins used (if using hash lookup type)
+				    SD.max_num_nucs  // Maximum number of nuclides present in any material
+						   );
 
-                        // For verification, and to prevent the compiler from optimizing
-                        // all work out, we interrogate the returned macro_xs_vector array
-                        // to find its maximum value index, then increment the verification
-                        // value by that index. In this implementation, we store to a global
-                        // array that will get tranferred back and reduced on the host.
-                        double max = -1.0;
-                        int max_idx = 0;
-                        for(int j = 0; j < 5; j++ )
-                        {
-                                if( macro_xs_vector[j] > max )
-                                {
-                                        max = macro_xs_vector[j];
-                                        max_idx = j;
-                                }
-                        }
-                        verification[i] = max_idx+1;
+				// For verification, and to prevent the compiler from optimizing
+				// all work out, we interrogate the returned macro_xs_vector array
+				// to find its maximum value index, then increment the verification
+				// value by that index. In this implementation, we store to a global
+				// array that will get tranferred back and reduced on the host.
+				double max = -1.0;
+				int max_idx = 0;
+				for(int j = 0; j < 5; j++ )
+				{
+					if( macro_xs_vector[j] > max )
+					{
+						max = macro_xs_vector[j];
+						max_idx = j;
+					}
+				}
+				verification[i] = max_idx+1;
 
-                });
-        });
+			});
+		});
+	}
         stop = get_time();
+
+	sycl_q.wait();
+	profile->kernel_time = get_time() - startP;
 
         if(mype==0) printf("Kernel initialization, compilation, and launch took %.2lf seconds.\n", stop-start);
 
-        verification_d.get_host_access();
+	startP = get_time();
+	sycl_q.copy(verification_d, verification_host, in.lookups);
+        verification_d.get_host_access(); // is this necessary? what does it do?
+	stop = get_time();
+	profile->d2h_time = get_time() - startP;
 
         // Host reduces the verification array
         unsigned long long verification_scalar = 0;
