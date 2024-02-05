@@ -403,7 +403,7 @@ Inputs read_CLI( int argc, char * argv[] )
 		{
 			if( ++i < argc )
 			{
-				input.kernel_id = atoi(argv[i]);
+				input.num_iterations = atoi(argv[i]);
 			}
 			else
 			print_CLI_error();

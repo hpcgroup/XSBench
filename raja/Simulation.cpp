@@ -40,7 +40,7 @@ unsigned long long run_event_based_simulation_baseline(Inputs in, SimulationData
         int nblocks = ceil( (double) in.lookups / (double) nthreads);
 
 	int nwarmups = in.num_iterations / 10;
-	double start = 0.0;
+	start = 0.0;
 	for (int it = 0; it < in.num_iterations + nwarmups; it++) {
 		if (it == nwarmups) {
 			start = get_time();
