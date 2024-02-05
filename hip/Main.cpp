@@ -38,6 +38,12 @@ int main( int argc, char* argv[] )
 	if( in.binary_mode == WRITE && mype == 0 )
 		binary_write(in, SD);
 
+	Profile profile;
+
+	// Move data to GPU
+	double start = get_time();
+	SimulationData GSD = move_simulation_data_to_device( in, mype, SD );
+	profile->h2d_time = get_time() - start;
 
 	// =====================================================================
 	// Cross Section (XS) Parallel Lookup Simulation
@@ -53,15 +59,14 @@ int main( int argc, char* argv[] )
 		border_print();
 	}
 
-	Profile profile;
-
+	// Start Simulation Timer
 	omp_start = get_time();
 
 	// Run simulation
 	if( in.simulation_method == EVENT_BASED )
 	{
 		if( in.kernel_id == 0 )
-			verification = run_event_based_simulation_baseline(in, SD, mype, &profile);
+			verification = run_event_based_simulation_baseline(in, GSD, mype, &profile);
 		/*
 		else if( in.kernel_id == 1 )
 			verification = run_event_based_simulation_optimization_1(in, GSD, mype);
@@ -76,6 +81,7 @@ int main( int argc, char* argv[] )
 		else if( in.kernel_id == 6 )
 			verification = run_event_based_simulation_optimization_6(in, GSD, mype);
 		*/
+
 		else
 		{
 			printf("Error: No kernel ID %d found!\n", in.kernel_id);
@@ -96,8 +102,6 @@ int main( int argc, char* argv[] )
 
 	// End Simulation Timer
 	omp_end = get_time();
-
-	release_memory(SD);
 
 	// Final Hash Step
 	verification = verification % 999983;

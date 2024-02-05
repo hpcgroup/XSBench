@@ -3,69 +3,16 @@
 
 #include<stdio.h>
 #include<stdlib.h>
-#include<time.h>
-#include<string.h>
 #include<math.h>
 #include<assert.h>
 #include<stdint.h>
+#include <chrono> 
 
-#ifdef _MSC_VER
-#define strncasecmp _strnicmp
-#define strcasecmp _stricmp
-#else
-#include<unistd.h>
-#include<sys/time.h>
-#endif
+#include<cuda.h>
 
 #include <RAJA/RAJA.hpp>
 #include "umpire/Allocator.hpp"
 #include "umpire/ResourceManager.hpp"
-
-#ifdef OPENMP
-#include<omp.h>
-#endif
-
-// Papi Header
-#ifdef PAPI
-#include "papi.h"
-#endif
-
-#if defined(RAJA_ENABLE_CUDA)
-#define RAJA_HOST_DEVICE __host__ __device__
-#define RAJA_DEVICE __device__
-#define RAJA_HOST __host__
-
-#elif defined(RAJA_ENABLE_HIP)
-#define RAJA_HOST_DEVICE __host__ __device__
-#define RAJA_DEVICE __device__
-#define RAJA_HOST __host__
-#define RAJA_SUPPRESS_HD_WARN
-
-#else
-
-#define RAJA_HOST_DEVICE
-#define RAJA_DEVICE
-#define RAJA_HOST
-#define RAJA_SUPPRESS_HD_WARN
-#endif
-
-//AML header
-#ifdef AML
-#include<aml.h>
-#include<aml/higher/replicaset.h>
-#include<aml/higher/replicaset/hwloc.h>
-#endif
-
-using policy_list = camp::list<RAJA::seq_exec
-,RAJA::simd_exec
-#if defined(RAJA_ENABLE_CUDA)
-,RAJA::cuda_exec<256>
-,RAJA::cuda_exec<512>
-#elif defined(RAJA_ENABLE_HIP)
-,RAJA::hip_exec<256>
-,RAJA::hip_exec<512>
-#endif
->;
 
 // Grid types
 #define UNIONIZED 0
@@ -83,6 +30,16 @@ using policy_list = camp::list<RAJA::seq_exec
 
 // Starting Seed
 #define STARTING_SEED 1070
+
+#define gpuErrchk(ans) { gpuAssert((ans), __FILE__, __LINE__); }
+inline void gpuAssert(cudaError_t code, const char *file, int line, bool abort=true)
+{
+        if (code != cudaSuccess) 
+        {
+                fprintf(stderr,"GPUassert: %s %s %d\n", cudaGetErrorString(code), file, line);
+                if (abort) exit(code);
+        }
+}
 
 // Structures
 typedef struct{
@@ -115,13 +72,6 @@ typedef struct{
         double * unionized_energy_array;    // Length = length_unionized_energy_array
         int * index_grid;                   // Length = length_index_grid
         NuclideGridPoint * nuclide_grid;    // Length = length_nuclide_grid
-#ifdef AML
-        struct aml_replicaset * num_nucs_replica;
-        struct aml_replicaset * concs_replica;
-        struct aml_replicaset * unionized_energy_array_replica;
-        struct aml_replicaset * index_grid_replica;
-        struct aml_replicaset * nuclide_grid_replica;
-#endif
         int length_num_nucs;
         int length_concs;
         int length_mats;
@@ -129,13 +79,15 @@ typedef struct{
         long length_index_grid;
         int length_nuclide_grid;
         int max_num_nucs;
+        unsigned long * verification;
+        int length_verification;
         double * p_energy_samples;
         int length_p_energy_samples;
         int * mat_samples;
         int length_mat_samples;
 } SimulationData;
 
-// io.c
+// io.cu
 void logo(int version);
 void center_print(const char *s, int width);
 void border_print(void);
@@ -147,38 +99,40 @@ int print_results( Inputs in, int mype, double runtime, int nprocs, unsigned lon
 void binary_write( Inputs in, SimulationData SD );
 SimulationData binary_read( Inputs in );
 
-// Simulation.c
-unsigned long long run_event_based_simulation(Inputs in, SimulationData SD, int mype, double* end);
-unsigned long long run_history_based_simulation(Inputs in, SimulationData SD, int mype);
+// Simulation.cu
+unsigned long long run_event_based_simulation_baseline(Inputs in, SimulationData SD, int mype);
 RAJA_HOST_DEVICE void calculate_micro_xs(   double p_energy, int nuc, long n_isotopes,
                                          long n_gridpoints,
-                                         double * egrid, int * index_data,
-                                         NuclideGridPoint * nuclide_grids,
-                                         long idx, double * xs_vector, int grid_type, int hash_bins );
+                                         double * __restrict__ egrid, int * __restrict__ index_data,
+                                         NuclideGridPoint * __restrict__ nuclide_grids,
+                                         long idx, double * __restrict__ xs_vector, int grid_type, int hash_bins );
 RAJA_HOST_DEVICE void calculate_macro_xs( double p_energy, int mat, long n_isotopes,
-                                         long n_gridpoints, int * num_nucs,
-                                         double * concs,
-                                         double * egrid, int * index_data,
-                                         NuclideGridPoint * nuclide_grids,
-                                         int * mats,
-                                         double * macro_xs_vector, int grid_type, int hash_bins, int max_num_nucs );
-RAJA_HOST_DEVICE long grid_search( long n, double quarry, double * A);
+                                         long n_gridpoints, int * __restrict__ num_nucs,
+                                         double * __restrict__ concs,
+                                         double * __restrict__ egrid, int * __restrict__ index_data,
+                                         NuclideGridPoint * __restrict__ nuclide_grids,
+                                         int * __restrict__ mats,
+                                         double * __restrict__ macro_xs_vector, int grid_type, int hash_bins, int max_num_nucs );
+RAJA_HOST_DEVICE long grid_search( long n, double quarry, double * __restrict__ A);
 RAJA_HOST_DEVICE long grid_search_nuclide( long n, double quarry, NuclideGridPoint * A, long low, long high);
 RAJA_HOST_DEVICE int pick_mat( uint64_t * seed );
 RAJA_HOST_DEVICE double LCG_random_double(uint64_t * seed);
 RAJA_HOST_DEVICE uint64_t fast_forward_LCG(uint64_t seed, uint64_t n);
-unsigned long long run_event_based_simulation_optimization_1(Inputs in, SimulationData SD, int mype);
 
-// GridInit.c
+// GridInit.cu
 SimulationData grid_init_do_not_profile( Inputs in, int mype );
+SimulationData move_simulation_data_to_device( Inputs in, int mype, SimulationData SD );
+void release_device_memory(SimulationData GSD);
+void release_memory(SimulationData SD);
 
-// XSutils.c
+// XSutils.cu
 int NGP_compare( const void * a, const void * b );
 int double_compare(const void * a, const void * b);
+double rn_v(void);
 size_t estimate_mem_usage( Inputs in );
 double get_time(void);
 
-// Materials.c
+// Materials.cu
 int * load_num_nucs(long n_isotopes);
 int * load_mats( int * num_nucs, long n_isotopes, int * max_num_nucs );
 double * load_concs( int * num_nucs, int max_num_nucs );

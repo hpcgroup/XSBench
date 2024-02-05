@@ -1,132 +1,92 @@
-#include "XSbench_header.hpp"
-
-#ifdef MPI
-#include<mpi.h>
-#endif
+#include "XSbench_header.h"
 
 int main( int argc, char* argv[] )
 {
-	// =====================================================================
-	// Initialization & Command Line Read-In
-	// =====================================================================
-	int version = 20;
-	int mype = 0;
-	double omp_start, omp_end;
-	int nprocs = 1;
-	unsigned long long verification;
+        // =====================================================================
+        // Initialization & Command Line Read-In
+        // =====================================================================
+        int version = 20;
+        int mype = 0;
+        double omp_start, omp_end;
+        int nprocs = 1;
+        unsigned long long verification;
 
-	#ifdef MPI
-	MPI_Init(&argc, &argv);
-	MPI_Comm_size(MPI_COMM_WORLD, &nprocs);
-	MPI_Comm_rank(MPI_COMM_WORLD, &mype);
-	#endif
+        // Process CLI Fields -- store in "Inputs" structure
+        Inputs in = read_CLI( argc, argv );
 
-	#ifdef AML
-	aml_init(&argc, &argv);
-	#endif
+        // Print-out of Input Summary
+        if( mype == 0 )
+                print_inputs( in, nprocs, version );
 
-	// Process CLI Fields -- store in "Inputs" structure
-	Inputs in = read_CLI( argc, argv );
+        // =====================================================================
+        // Prepare Nuclide Energy Grids, Unionized Energy Grid, & Material Data
+        // This is not reflective of a real Monte Carlo simulation workload,
+        // therefore, do not profile this region!
+        // =====================================================================
 
-	// Set number of OpenMP Threads
-	#ifdef OPENMP
-	omp_set_num_threads(in.nthreads);
-	#endif
+        SimulationData SD;
 
-	// Print-out of Input Summary
-	if( mype == 0 )
-		print_inputs( in, nprocs, version );
+        // If read from file mode is selected, skip initialization and load
+        // all simulation data structures from file instead
+        if( in.binary_mode == READ )
+                SD = binary_read(in);
+        else
+                SD = grid_init_do_not_profile( in, mype );
 
-	// =====================================================================
-	// Prepare Nuclide Energy Grids, Unionized Energy Grid, & Material Data
-	// This is not reflective of a real Monte Carlo simulation workload,
-	// therefore, do not profile this region!
-	// =====================================================================
+        // If writing from file mode is selected, write all simulation data
+        // structures to file
+        if( in.binary_mode == WRITE && mype == 0 )
+                binary_write(in, SD);
 
-	SimulationData SD;
+        // =====================================================================
+        // Cross Section (XS) Parallel Lookup Simulation
+        // This is the section that should be profiled, as it reflects a 
+        // realistic continuous energy Monte Carlo macroscopic cross section
+        // lookup kernel.
+        // =====================================================================
+        if( mype == 0 )
+        {
+                printf("\n");
+                border_print();
+                center_print("SIMULATION", 79);
+                border_print();
+        }
 
-	// If read from file mode is selected, skip initialization and load
-	// all simulation data structures from file instead
-	if( in.binary_mode == READ )
-		SD = binary_read(in);
-	else
-		SD = grid_init_do_not_profile( in, mype );
+        // Start Simulation Timer
+        omp_start = get_time();
 
-	// If writing from file mode is selected, write all simulation data
-	// structures to file
-	if( in.binary_mode == WRITE && mype == 0 )
-		binary_write(in, SD);
+        // Run simulation
+        if( in.simulation_method == EVENT_BASED )
+        {
+                if( in.kernel_id == 0 )
+                        verification = run_event_based_simulation_baseline(in, SD, mype);
+                        else {
+                        printf("Error: No kernel ID %d found!\n", in.kernel_id);
+                        exit(1);
+                }
+        }
+        else
+        {
+                printf("History-based simulation not implemented in CUDA code. Instead,\nuse the event-based method with \"-m event\" argument.\n");
+        exit(1);
+        }
 
+        if( mype == 0)	
+        {	
+                printf("\n" );
+                printf("Simulation complete.\n" );
+        }
 
-	// =====================================================================
-	// Cross Section (XS) Parallel Lookup Simulation
-	// This is the section that should be profiled, as it reflects a
-	// realistic continuous energy Monte Carlo macroscopic cross section
-	// lookup kernel.
-	// =====================================================================
+        // End Simulation Timer
+        omp_end = get_time();
 
-	if( mype == 0 )
-	{
-		printf("\n");
-		border_print();
-		center_print("SIMULATION", 79);
-		border_print();
-	}
+        // Final Hash Step
+        verification = verification % 999983;
 
-	Profile profile;
+        release_memory(SD);
 
-	// Start Simulation Timer
-	omp_start = get_time();
+        // Print / Save Results and Exit
+        int is_invalid_result = print_results( in, mype, omp_end-omp_start, nprocs, verification );
 
-	// Run simulation
-	if( in.simulation_method == EVENT_BASED )
-	{
-		if( in.kernel_id == 0 )
-			verification = run_event_based_simulation(in, SD, mype, &profile);
-		else if( in.kernel_id == 1 )
-			verification = run_event_based_simulation_optimization_1(in, SD, mype);
-		else
-		{
-			printf("Error: No kernel ID %d found!\n", in.kernel_id);
-			exit(1);
-		}
-	}
-	else
-		verification = run_history_based_simulation(in, SD, mype);
-
-	if( mype == 0)
-	{
-		printf("\n" );
-		printf("Simulation complete.\n" );
-	}
-
-	// End Simulation Timer
-#ifndef ALIGNED_WORK
-	omp_end = get_time();
-#endif
-	// =====================================================================
-	// Output Results & Finalize
-	// =====================================================================
-
-	// Final Hash Step
-	verification = verification % 999983;
-
-	// Print / Save Results and Exit
-	int is_invalid_result = print_results( in, mype, omp_end-omp_start, nprocs, verification );
-
-	#ifdef MPI
-	MPI_Finalize();
-	#endif
-
-	#ifdef AML
-	aml_finalize();
-	#endif
-
-	printf("host_to_device_ms,kernel_ms,device_to_host_ms\n");
-	printf("%f,%f,%f\n",
-	       profile.h2d_time*1000,
-	       profile.kernel_time*1000,
-	       profile.d2h_time*1000);
-
-	return is_invalid_result;
+        return is_invalid_result;
 }

@@ -33,7 +33,7 @@ void center_print(const char *s, int width)
 }
 
 int print_results( Inputs in, int mype, double runtime, int nprocs,
-	unsigned long long vhash )
+		   unsigned long long vhash )
 {
 	// Calculate Lookups per sec
 	int lookups = 0;
@@ -61,7 +61,7 @@ int print_results( Inputs in, int mype, double runtime, int nprocs,
 		border_print();
 
 		// Print the results
-    printf("NOTE: Timings are estimated -- use nvprof/nsys/iprof/rocprof for formal analysis\n");
+		printf("NOTE: Timings are estimated -- use nvprof/nsys/iprof/rocprof for formal analysis\n");
 		#ifdef MPI
 		printf("MPI ranks:   %d\n", nprocs);
 		#endif
@@ -187,23 +187,23 @@ void border_print(void)
 // Prints comma separated integers - for ease of reading
 void fancy_int( long a )
 {
-    if( a < 1000 )
-	printf("%ld\n",a);
+	if( a < 1000 )
+		printf("%ld\n",a);
 
-    else if( a >= 1000 && a < 1000000 )
-	printf("%ld,%03ld\n", a / 1000, a % 1000);
+	else if( a >= 1000 && a < 1000000 )
+		printf("%ld,%03ld\n", a / 1000, a % 1000);
 
-    else if( a >= 1000000 && a < 1000000000 )
-	printf("%ld,%03ld,%03ld\n",a / 1000000,(a % 1000000) / 1000,a % 1000 );
+	else if( a >= 1000000 && a < 1000000000 )
+		printf("%ld,%03ld,%03ld\n",a / 1000000,(a % 1000000) / 1000,a % 1000 );
 
-    else if( a >= 1000000000 )
-	printf("%ld,%03ld,%03ld,%03ld\n",
-	       a / 1000000000,
-	       (a % 1000000000) / 1000000,
-	       (a % 1000000) / 1000,
-	       a % 1000 );
-    else
-	printf("%ld\n",a);
+	else if( a >= 1000000000 )
+		printf("%ld,%03ld,%03ld,%03ld\n",
+		       a / 1000000000,
+		       (a % 1000000000) / 1000000,
+		       (a % 1000000) / 1000,
+		       a % 1000 );
+	else
+		printf("%ld\n",a);
 }
 
 void print_CLI_error(void)

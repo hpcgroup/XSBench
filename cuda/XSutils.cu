@@ -49,18 +49,18 @@ size_t estimate_mem_usage( Inputs in )
 {
 	size_t single_nuclide_grid = in.n_gridpoints * sizeof( NuclideGridPoint );
 	size_t all_nuclide_grids   = in.n_isotopes * single_nuclide_grid;
-	size_t size_UEG            = in.n_isotopes*in.n_gridpoints*sizeof(double) + in.n_isotopes*in.n_gridpoints*in.n_isotopes*sizeof(int);
-	size_t size_hash_grid      = in.hash_bins * in.n_isotopes * sizeof(int);
+	size_t size_UEG		   = in.n_isotopes*in.n_gridpoints*sizeof(double) + in.n_isotopes*in.n_gridpoints*in.n_isotopes*sizeof(int);
+	size_t size_hash_grid	   = in.hash_bins * in.n_isotopes * sizeof(int);
 	size_t memtotal;
 
 	if( in.grid_type == UNIONIZED )
-		memtotal          = all_nuclide_grids + size_UEG;
+		memtotal	  = all_nuclide_grids + size_UEG;
 	else if( in.grid_type == NUCLIDE )
-		memtotal          = all_nuclide_grids;
+		memtotal	  = all_nuclide_grids;
 	else
-		memtotal          = all_nuclide_grids + size_hash_grid;
+		memtotal	  = all_nuclide_grids + size_hash_grid;
 
-	memtotal          = ceil(memtotal / (1024.0*1024.0));
+	memtotal	  = ceil(memtotal / (1024.0*1024.0));
 	return memtotal;
 }
 
@@ -70,11 +70,9 @@ double get_time(void)
 	return MPI_Wtime();
 	#endif
 
-	/*
 	#ifdef OPENMP
 	return omp_get_wtime();
 	#endif
-	*/
 
 	#ifdef __cplusplus
 	// If using C++, we can do this:

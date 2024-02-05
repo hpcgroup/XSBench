@@ -13,13 +13,8 @@
 // line argument.
 ////////////////////////////////////////////////////////////////////////////////////
 
-unsigned long long run_event_based_simulation_baseline(Inputs in, SimulationData SD, int mype, Profile* profile)
+unsigned long long run_event_based_simulation_baseline(Inputs in, SimulationData GSD, int mype, Profile* profile)
 {
-	// Move Data to Device
-	double start = get_time();
-	SimulationData GSD = move_simulation_data_to_device(in, mype, SD);
-	profile->h2d_time = get_time() - start;
-
 	////////////////////////////////////////////////////////////////////////////////
 	// Configure & Launch Simulation Kernel
 	////////////////////////////////////////////////////////////////////////////////
@@ -52,12 +47,9 @@ unsigned long long run_event_based_simulation_baseline(Inputs in, SimulationData
 	////////////////////////////////////////////////////////////////////////////////
 	if( mype == 0)	printf("Reducing verification results...\n");
 
-
-	gpuErrchk( hipMemcpy(SD.verification, GSD.verification, in.lookups * sizeof(unsigned long), hipMemcpyDeviceToHost) );
-
 	unsigned long verification_scalar = 0;
 	for( int i =0; i < in.lookups; i++ )
-	    verification_scalar += SD.verification[i];
+	    verification_scalar += v[i];
 
 	return verification_scalar;
 }

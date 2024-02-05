@@ -2,32 +2,29 @@
 # User Options
 #===============================================================================
 
-RAJA_PATH ?= ${SPACK_ENV}/.spack-env/view/
-# RAJA_PATH ?= /g/g90/harshita/wsb/workspace/raja-suite-tutorial/build/tpl/raja/
+RAJA_PATH ?=
+Umpire_PATH ?=
+camp_PATH ?=
+TARGET ?= # Choose Target Backend (CUDA, HIP, OpenMP) Default is Sequential
+SM_VERSION ?= # For CUDA Target
+OFFLOAD_ARCH ?= # For HIP Target
+
+OPTIMIZE ?= yes
+DEBUG ?= no
+PROFILE ?= no
+MPI ?= no
+
 RAJA_INCLUDE_DIR = $(RAJA_PATH)/include
 RAJA_LIB_DIR = $(RAJA_PATH)/lib
 
-Umpire_PATH ?= ${SPACK_ENV}/.spack-env/view/
-# Umpire_PATH ?= /g/g90/harshita/wsb/workspace/raja-suite-tutorial/build/tpl/Umpire/
 Umpire_INCLUDE_DIR = $(Umpire_PATH)/include
 Umpire_LIB_DIR = $(Umpire_PATH)/lib
 
-camp_PATH ?= ${SPACK_ENV}/.spack-env/view/
-camp_INCLUDE_DIR = $(camp_PATH)/include
+camp_INCLUDE_DIR ?= $(camp_PATH)/include
 camp_LIB_DIR = $(camp_PATH)/lib
 
-CPP_BIN ?= $(shell which g++)
-
-CUDA_PATH   ?= ${CUDA_HOME}
-COMPILER    ?= nvidia
-OPTIMIZE    ?= yes
-DEBUG       ?= no
-PROFILE     ?= no
-MPI         ?= no
-RAJA_DEVICES ?= Cuda#OpenMP#,Cuda
-RAJA_ARCH ?= Power9# Zen3,Ampere80
-SM_VERSION ?= 70
-ALIGNED ?= yes
+RAJA_COMPILER_FLAGS ?=
+RAJA_LINKER_FLAGS ?=
 
 #===============================================================================
 # Program name & source code list
@@ -45,58 +42,15 @@ Materials.cpp
 
 obj = $(source:.cpp=.o)
 
-#===============================================================================
-# Sets Flags
-#===============================================================================
-
-# Standard Flags
-CXXFLAGS := #-Wall
+CXXFLAGS := -std=c++14
 
 # Linker Flags
-LDFLAGS = -lm -Wl,-rpath=$(RAJA_LIB_DIR):$(Umpire_LIB_DIR)
-
-# HIP Compiler
-ifeq ($(COMPILER),hip)
-  CXX = hipcc
-  CXXFLAGS +=  -std=c++17 -DHIP_EXEC
-endif
-
-# NVIDIA Compiler
-ifeq ($(COMPILER),nvidia)
-  #CXX = ${RAJA_PATH}/bin/nvcc_wrapper
-  #CXXFLAGS += -ccbin nvc++ -Xcompiler -Wall -Xcompiler -O3 -arch=sm_$(SM_VERSION)
-  CXX = nvcc#RAJA_PATH}/bin/nvcc_wrapper
-  CXXFLAGS +=  -forward-unknown-to-host-compiler -ccbin=${CPP_BIN} -x cu -Xcompiler -O3 --extended-lambda -arch=sm_$(SM_VERSION) -DTHRUST_IGNORE_CUB_VERSION_CHECK -DCUDA_EXEC
-
-  # CXXFLAGS +=  -forward-unknown-to-host-compiler -ccbin=/usr/tce/packages/gcc/gcc-8.3.1/bin/c++ -Xcompiler=-fPIE -std=c++14 -x cu -O3 --extended-lambda -arch=sm_$(SM_VERSION) 
-endif
-
-# Clang Compiler
-ifeq ($(COMPILER),llvm)
-  CXX = clang++
-  CXXFLAGS += -flto -fopenmp -DOPENMP
-endif
-
-# GCC Compiler
-ifeq ($(COMPILER),gnu)
-  ifneq (,$(findstring Cuda,$(RAJA_DEVICES)))
-    CXX = nvcc#RAJA_PATH}/bin/nvcc_wrapper
-    CXXFLAGS += -arch=sm_$(SM_VERSION) 
-  else
-    CXX = g++
-    CXXFLAGS += -flto -fopenmp -DOPENMP
-  endif
-endif
-
+LDFLAGS = -lm
 
 # Debug Flags
 ifeq ($(DEBUG),yes)
-  CXXFLAGS += -g
-  LDFLAGS  += -g
-ifeq ($(COMPILER),nvidia)
-  CXXFLAGS += -G
-  LDFLAGS  += -G
-endif
+  CXXFLAGS += -g -G
+  LDFLAGS += -g -G
 endif
 
 # Profiling Flags
@@ -110,45 +64,45 @@ ifeq ($(OPTIMIZE),yes)
   CXXFLAGS += -O3
 endif
 
-# MPI
-ifeq ($(MPI),yes)
-  CXX = mpicxx
-  CXXFLAGS += -DMPI
+ifeq ($(TARGET),CUDA)
+  CXX = nvcc
+  RAJA_COMPILER_FLAGS = -x cu --expt-relaxed-constexpr -forward-unknown-to-host-compiler -extended-lambda -restrict -keep -arch=sm_$(SM_VERSION) 
+  CXXFLAGS += $(CUDAFLAGS)
+  RAJA_LINKER_FLAGS += -Xlinker -rpath=$(RAJA_LIB_DIR) -Xlinker -rpath=$(Umpire_LIB_DIR)
 endif
 
-ifeq ($(ALIGNED),yes)
-  CFLAGS += -DALIGNED_WORK
+ifeq ($(TARGET),HIP)
+  CXX = hipcc
+  RAJA_COMPILER_FLAGS = --offload-arch=$(OFFLOAD_ARCH)
+  CXXFLAGS += $(HIPFLAGS)
+  RAJA_LINKER_FLAGS += -Xlinker -rpath=$(RAJA_LIB_DIR) -Xlinker -rpath=$(Umpire_LIB_DIR)
 endif
 
-#===============================================================================
-# Targets to Build
-#===============================================================================
+ifeq ($(TARGET), OpenMP)
+  CXXFLAGS += -fopenmp
+  LDFLAGS += -fopenmp
+  LDFLAGS += -Xlinker -rpath=$(RAJA_LIB_DIR) -Xlinker -rpath=$(Umpire_LIB_DIR)
+endif
 
 default: $(program)
 
-#include $(RAJA_PATH)/Makefile.kokkos
-RAJA_LIBS = -lRAJA
-RAJA_LDFLAGS = -L$(RAJA_LIB_DIR) -Wl,-rpath=$(RAJA_LIB_DIR)
-RAJA_CXXFLAGS = -I./ -I$(RAJA_INCLUDE_DIR)
+RAJA_COMPILER_FLAGS += -I./ -I$(RAJA_INCLUDE_DIR) -I$(Umpire_INCLUDE_DIR) -I$(camp_INCLUDE_DIR)
+RAJA_LINKER_FLAGS += -lRAJA -lumpire -lcamp
+RAJA_LINKER_FLAGS += -L$(RAJA_LIB_DIR) -L$(Umpire_LIB_DIR) -L$(camp_LIB_DIR)
 
-Umpire_LIBS = -lumpire -lcamp
-Umpire_LDFLAGS = -L$(Umpire_LIB_DIR) -Wl,-rpath=$(Umpire_LIB_DIR) -L$(camp_LIB_DIR)
-Umpire_CXXFLAGS = -I./ -I$(Umpire_INCLUDE_DIR) -I$(camp_INCLUDE_DIR)
+CXXFLAGS += -w
 
-CUDA_LDFLAGS = -L$(CUDA_PATH)/lib
-CUDA_CXXFLAGS = -I./ -I$(CUDA_PATH)/include
+$(program): $(obj) XSbench_header.h Makefile
+	$(CXX) $(obj) -o $@ $(LDFLAGS) $(RAJA_LINKER_FLAGS)
 
-$(program): $(obj) XSbench_header.hpp Makefile 
-	$(CXX) $(RAJA_LDFLAGS) $(Umpire_LDFLAGS) $(CUDA_LDFLAGS) $(obj) $(RAJA_LIBS) $(Umpire_LIBS) $(CXXFLAGS) -o $@ $(LDFLAGS)
-
-%.o: %.cpp XSbench_header.hpp Makefile $(RAJA_CPP_DEPENDS)
-	$(CXX) $(RAJA_CXXFLAGS) $(Umpire_CXXFLAGS) $(CUDA_CXXFLAGS) $(CXXFLAGS) -c $< -o $@
+%.o: %.cpp XSbench_header.h Makefile
+	$(CXX) $(CXXFLAGS) $(RAJA_COMPILER_FLAGS) -c $< -o $@
 
 clean:
-	rm -rf $(program) $(obj) *.tmp 
+	rm -rf $(program) $(obj) *.cpp1* *.cpp4* *.ptx *.cubin *.cudafe1* *.fatbin* *.module_id
 
 edit:
-	vim -p $(source) XSbench_header.hpp
+	vim -p $(source) XSbench_header.h
 
 run:
 	./$(program)
