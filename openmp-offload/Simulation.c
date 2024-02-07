@@ -107,9 +107,7 @@ unsigned long long run_event_based_simulation(Inputs in, SimulationData SD, int 
 		verification[i] = max_idx+1;
 	}
 
-#ifdef ALIGNED_WORK
 	*end = omp_get_wtime();
-#endif
 
 	// Reduce validation hash on the host
 	unsigned long long validation_hash = 0;

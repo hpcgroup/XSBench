@@ -42,16 +42,11 @@ unsigned long long run_event_based_simulation(Inputs in, SimulationData SD, int 
 	////////////////////////////////////////////////////////////////////////////////
 	unsigned long long * verification = (unsigned long long *) malloc(in.lookups * sizeof(unsigned long long));
 
-        #pragma acc parallel loop\
-        copyin( SD)\
-        copyin( SD.max_num_nucs)\
-	copyin( SD.num_nucs[0:SD.length_num_nucs])\
-	copyin( SD.concs[0:SD.length_concs])\
-	copyin( SD.mats[0:SD.length_mats])\
-	copyin( SD.unionized_energy_array[0:SD.length_unionized_energy_array])\
-	copyin( SD.index_grid[0:SD.length_index_grid])\
-	copyin( SD.nuclide_grid[0:SD.length_nuclide_grid])\
-        copyout( verification[0:in.lookups])
+    #pragma acc parallel loop\
+        copyin(SD.max_num_nucs, SD.num_nucs[:SD.length_num_nucs], SD.concs[:SD.length_concs], \
+	           SD.mats[:SD.length_mats], SD.unionized_energy_array[:SD.length_unionized_energy_array], \
+	           SD.index_grid[:SD.length_index_grid], SD.nuclide_grid[:SD.length_nuclide_grid]) \
+        copyout(verification[:in.lookups])
 	for( int i = 0; i < in.lookups; i++ )
 	{
 		// Set the initial seed value
@@ -107,10 +102,6 @@ unsigned long long run_event_based_simulation(Inputs in, SimulationData SD, int 
 		}
 		verification[i] = max_idx+1;
 	}
-
-#ifdef ALIGNED_WORK
-	*end = omp_get_wtime();
-#endif
 
 	// Reduce validation hash on the host
 	unsigned long long validation_hash = 0;
