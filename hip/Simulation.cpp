@@ -24,6 +24,7 @@ unsigned long long run_event_based_simulation_baseline(Inputs in, SimulationData
 	int nblocks = ceil( (double) in.lookups / (double) nthreads);
 
 	int nwarmups = in.num_iterations / 10;
+	double start = 0.0;
 	for (int i = 0; i < in.num_iterations + nwarmups; i++) {
 		if (i == nwarmups) {
 			gpuErrchk( hipDeviceSynchronize() );
