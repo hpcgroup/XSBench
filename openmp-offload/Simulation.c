@@ -124,8 +124,6 @@ unsigned long long run_event_based_simulation(Inputs in, SimulationData SD, int 
 
 	profile->d2h_time = get_time() - start;
 
-	*end = omp_get_wtime();
-
 	// Reduce validation hash on the host
 	unsigned long long validation_hash = 0;
 	for( int i = 0; i < in.lookups; i++ )

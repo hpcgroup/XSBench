@@ -43,7 +43,7 @@ int main( int argc, char* argv[] )
 	// Move data to GPU
 	double start = get_time();
 	SimulationData GSD = move_simulation_data_to_device( in, mype, SD );
-	profile->h2d_time = get_time() - start;
+	profile.h2d_time = get_time() - start;
 
 	// =====================================================================
 	// Cross Section (XS) Parallel Lookup Simulation
