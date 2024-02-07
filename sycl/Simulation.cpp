@@ -51,6 +51,9 @@ unsigned long long run_event_based_simulation(Inputs in, SimulationData SD, int 
         // Create Device Buffers
         ////////////////////////////////////////////////////////////////////////////////
 
+#ifdef SYCL_USE_BUFFERS
+	double startP = get_time();
+
         // assign SYCL buffer to existing memory
         sycl::buffer<int> num_nucs_d(SD.num_nucs,SD.length_num_nucs);
         sycl::buffer<double> concs_d(SD.concs, SD.length_concs);
@@ -60,21 +63,28 @@ unsigned long long run_event_based_simulation(Inputs in, SimulationData SD, int 
         sycl::buffer<NuclideGridPoint> nuclide_grid_d(SD.nuclide_grid, SD.length_nuclide_grid);
         sycl::buffer<int> verification_d(verification_host, in.lookups);
 
-	double startP = get_time();
-	// copy data to device
-	sycl_q.copy(SD.num_nucs, num_nucs_d, SD.length_num_nucs);
-	sycl_q.copy(SD.concs, concs_d, SD.length_concs);
-	sycl_q.copy(SD.mats, mats_d, SD.length_mats);
-	sycl_q.copy(SD.unionized_energy_array, unionized_energy_array_d, SD.length_unionized_energy_array);
-	sycl_q.copy(SD.index_grid, index_grid_d, SD.length_index_grid);
-	sycl_q.copy(SD.nuclide_grid, nuclide_grid_d, SD.length_nuclide_grid);
-	sycl_q.wait();
 	profile->h2d_time = get_time() - startP;
+#else
+	int* num_nucs                   = sycl::malloc_device<int>(SD.length_num_nucs, sycl_q);
+	double* concs                   = sycl::malloc_device<double>(SD.length_concs, sycl_q);
+	int* mats                       = sycl::malloc_device<int>(SD.length_mats, sycl_q);
+	double* unionized_energy_array  = sycl::malloc_device<double>(SD.length_unionized_energy_array, sycl_q);
+	int* index_grid                 = sycl::malloc_device<int>(SD.length_index_grid, sycl_q);
+	NuclideGridPoint* nuclide_grid  = sycl::malloc_device<NuclideGridPoint>(SD.length_nuclide_grid, sycl_q);
+	int* verification               = sycl::malloc_device<int>(in.lookups, sycl_q);
 
+	double startP = get_time();
 
-        ////////////////////////////////////////////////////////////////////////////////
-        // Define Device Kernel
-        ////////////////////////////////////////////////////////////////////////////////
+	sycl_q.memcpy(num_nucs, SD.num_nucs, SD.length_num_nucs * sizeof(int));
+	sycl_q.memcpy(concs, SD.concs, SD.length_concs * sizeof(double));
+	sycl_q.memcpy(mats, SD.mats, SD.length_mats * sizeof(int));
+	sycl_q.memcpy(unionized_energy_array, SD.unionized_energy_array, SD.length_unionized_energy_array * sizeof(double));
+	sycl_q.memcpy(index_grid, SD.index_grid, SD.length_index_grid * sizeof(int));
+	sycl_q.memcpy(nuclide_grid, SD.nuclide_grid, SD.length_nuclide_grid * sizeof(NuclideGridPoint));
+	sycl_q.wait();
+
+	profile->h2d_time = get_time() - startP;
+#endif
 
         if(mype==0) printf("Beginning event based simulation...\n");
 
@@ -82,11 +92,17 @@ unsigned long long run_event_based_simulation(Inputs in, SimulationData SD, int 
 	startP = 0.0;
 	for (int it = 0; it < in.num_iterations + nwarmups; it++) {
 		if (it == nwarmups) {
-			startP = get_time();
 			sycl_q.wait();
+			startP = get_time();
 		}
+
+		////////////////////////////////////////////////////////////////////////////////
+		// Define Device Kernel
+		////////////////////////////////////////////////////////////////////////////////
+
 		// queue a kernel to be run, as a lambda
 		sycl_q.submit([&](sycl::handler &cgh) {
+#ifdef SYCL_USE_BUFFERS
 			////////////////////////////////////////////////////////////////////////////////
 			// Create Device Accessors for Device Buffers
 			////////////////////////////////////////////////////////////////////////////////
@@ -97,6 +113,7 @@ unsigned long long run_event_based_simulation(Inputs in, SimulationData SD, int 
 			sycl::accessor index_grid {index_grid_d, cgh, sycl::read_only};
 			sycl::accessor nuclide_grid {nuclide_grid_d, cgh, sycl::read_only};
 			sycl::accessor verification {verification_d, cgh, sycl::write_only, sycl::no_init};
+#endif
 
 			////////////////////////////////////////////////////////////////////////////////
 			// XS Lookup Simulation Loop
@@ -166,15 +183,27 @@ unsigned long long run_event_based_simulation(Inputs in, SimulationData SD, int 
         if(mype==0) printf("Kernel initialization, compilation, and launch took %.2lf seconds.\n", stop-start);
 
 	startP = get_time();
-	sycl_q.copy(verification_d, verification_host, in.lookups);
-        verification_d.get_host_access(); // is this necessary? what does it do?
-	stop = get_time();
+#ifdef SYCL_USE_BUFFERS
+        verification_d.get_host_access();
+#else
+	sycl_q.memcpy(verification_host, verification, in.lookups * sizeof(int)).wait();
+#endif
 	profile->d2h_time = get_time() - startP;
 
         // Host reduces the verification array
         unsigned long long verification_scalar = 0;
         for( int i = 0; i < in.lookups; i++ )
                 verification_scalar += verification_host[i];
+
+#ifndef SYCL_USE_BUFFERS
+	sycl::free(num_nucs, sycl_q);
+	sycl::free(concs, sycl_q);
+	sycl::free(mats, sycl_q);
+	sycl::free(unionized_energy_array, sycl_q);
+	sycl::free(index_grid, sycl_q);
+	sycl::free(nuclide_grid, sycl_q);
+	sycl::free(verification, sycl_q);
+#endif
 
         return verification_scalar;
 }

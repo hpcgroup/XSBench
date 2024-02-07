@@ -2,14 +2,16 @@
 # User Options
 #===============================================================================
 
-COMPILER    ?= llvm
-OPTIMIZE    ?= yes
-DEBUG       ?= no
-PROFILE     ?= no
-MPI         ?= no
-TARGET ?=
-SM_VERSION ?= 
-OFFLOAD_ARCH ?=
+COMPILER      ?= llvm
+OPTIMIZE      ?= yes
+DEBUG         ?= no
+PROFILE       ?= no
+MPI           ?= no
+TARGET        ?=
+SM_VERSION    ?=
+OFFLOAD_ARCH  ?=
+USE_BUFFERS   ?= no
+CHECK_MAX     ?= no
 
 #===============================================================================
 # Program name & source code list
@@ -99,6 +101,11 @@ endif
 # Disable or enable checking SYCL max mem alloc
 ifeq ($(CHECK_MAX),yes)
 	CFLAGS += -DCHECK_MAX_ALLOC
+endif
+
+# Enable to use SYCL buffers, disable to use explicit USM
+ifeq ($(USE_BUFFERS),yes)
+	CFLAGS += -DSYCL_USE_BUFFERS
 endif
 
 # MPI
