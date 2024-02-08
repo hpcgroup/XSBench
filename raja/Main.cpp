@@ -90,11 +90,12 @@ int main( int argc, char* argv[] )
         // Print / Save Results and Exit
         int is_invalid_result = print_results( in, mype, omp_end-omp_start, nprocs, verification );
 
-	printf("host_to_device_ms,kernel_ms,device_to_host_ms\n");
-	printf("%f,%f,%f\n",
+	printf("host_to_device_ms,kernel_ms,device_to_host_ms,num_iterations\n");
+	printf("%f,%f,%f,%d\n",
 	       profile.h2d_time*1000,
 	       profile.kernel_time*1000,
-	       profile.d2h_time*1000);
+	       profile.d2h_time*1000,
+	       in.num_iterations);
 
         return is_invalid_result;
 }

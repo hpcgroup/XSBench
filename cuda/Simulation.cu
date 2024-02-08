@@ -14,7 +14,7 @@
 
 unsigned long long run_event_based_simulation_baseline(Inputs in, SimulationData SD, int mype, Profile* profile)
 {
-	double start = 0.0;
+	double start = get_time();
         // Move Data to GPU
         SimulationData GSD = move_simulation_data_to_device(in, mype, SD);
 	profile->h2d_time = get_time() - start;
