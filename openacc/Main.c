@@ -113,12 +113,7 @@ int main( int argc, char* argv[] )
 	MPI_Finalize();
 	#endif
 
-	printf("host_to_device_ms,kernel_ms,device_to_host_ms,num_iterations\n");
-	printf("%f,%f,%f,%d\n",
-	       profile.host_to_device_time*1000,
-	       profile.kernel_time*1000,
-	       profile.device_to_host_time*1000,
-	       in.num_iterations);
+	print_profile(profile, in);
 
 	return is_invalid_result;
 }

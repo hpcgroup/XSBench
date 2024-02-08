@@ -7,6 +7,7 @@
 #include<assert.h>
 #include<stdint.h>
 #include<chrono>
+#include "../XSbench_shared_header.h"
 
 #include <RAJA/RAJA.hpp>
 #include "umpire/Allocator.hpp"
@@ -63,21 +64,6 @@ typedef struct{
 } NuclideGridPoint;
 
 typedef struct{
-        int nthreads;
-        long n_isotopes;
-        long n_gridpoints;
-        int lookups;
-        char * HM;
-        int grid_type; // 0: Unionized Grid (default)    1: Nuclide Grid
-        int hash_bins;
-        int particles;
-        int simulation_method;
-        int binary_mode;
-        int kernel_id;
-	int num_iterations;
-} Inputs;
-
-typedef struct{
         int * num_nucs;                     // Length = length_num_nucs;
         double * concs;                     // Length = length_concs
         int * mats;                         // Length = length_mats
@@ -98,12 +84,6 @@ typedef struct{
         int * mat_samples;
         int length_mat_samples;
 } SimulationData;
-
-typedef struct{
-	double host_to_device_time;
-	double kernel_time;
-	double device_to_host_time;
-} Profile;
 
 // io.cpp
 void logo(int version);
