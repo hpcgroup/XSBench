@@ -97,9 +97,7 @@ int main( int argc, char* argv[] )
 	}
 
 	// End Simulation Timer
-#ifndef ALIGNED_WORK
 	omp_end = omp_get_wtime();
-#endif
 
 	// =====================================================================
 	// Output Results & Finalize

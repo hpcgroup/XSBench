@@ -51,9 +51,8 @@ unsigned long long run_event_based_simulation(Inputs in, SimulationData SD, int 
         // Create Device Buffers
         ////////////////////////////////////////////////////////////////////////////////
 
-#ifdef SYCL_USE_BUFFERS
 	double startP = get_time();
-
+#ifdef SYCL_USE_BUFFERS
         // assign SYCL buffer to existing memory
         sycl::buffer<int> num_nucs_d(SD.num_nucs,SD.length_num_nucs);
         sycl::buffer<double> concs_d(SD.concs, SD.length_concs);
@@ -62,8 +61,6 @@ unsigned long long run_event_based_simulation(Inputs in, SimulationData SD, int 
         sycl::buffer<int> index_grid_d(SD.index_grid, SD.length_index_grid);
         sycl::buffer<NuclideGridPoint> nuclide_grid_d(SD.nuclide_grid, SD.length_nuclide_grid);
         sycl::buffer<int> verification_d(verification_host, in.lookups);
-
-	profile->h2d_time = get_time() - startP;
 #else
 	int* num_nucs                   = sycl::malloc_device<int>(SD.length_num_nucs, sycl_q);
 	double* concs                   = sycl::malloc_device<double>(SD.length_concs, sycl_q);
@@ -73,8 +70,6 @@ unsigned long long run_event_based_simulation(Inputs in, SimulationData SD, int 
 	NuclideGridPoint* nuclide_grid  = sycl::malloc_device<NuclideGridPoint>(SD.length_nuclide_grid, sycl_q);
 	int* verification               = sycl::malloc_device<int>(in.lookups, sycl_q);
 
-	double startP = get_time();
-
 	sycl_q.memcpy(num_nucs, SD.num_nucs, SD.length_num_nucs * sizeof(int));
 	sycl_q.memcpy(concs, SD.concs, SD.length_concs * sizeof(double));
 	sycl_q.memcpy(mats, SD.mats, SD.length_mats * sizeof(int));
@@ -82,9 +77,8 @@ unsigned long long run_event_based_simulation(Inputs in, SimulationData SD, int 
 	sycl_q.memcpy(index_grid, SD.index_grid, SD.length_index_grid * sizeof(int));
 	sycl_q.memcpy(nuclide_grid, SD.nuclide_grid, SD.length_nuclide_grid * sizeof(NuclideGridPoint));
 	sycl_q.wait();
-
-	profile->h2d_time = get_time() - startP;
 #endif
+	profile->h2d_time = get_time() - startP;
 
         if(mype==0) printf("Beginning event based simulation...\n");
 

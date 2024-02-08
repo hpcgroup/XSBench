@@ -71,7 +71,7 @@ int main( int argc, char* argv[] )
 	Profile profile;
 
 	// Start Simulation Timer
-	omp_start = omp_get_wtime();
+	omp_start = get_time();
 
 	// Run simulation
 	if( in.simulation_method == EVENT_BASED )
@@ -96,10 +96,8 @@ int main( int argc, char* argv[] )
 		printf("Simulation complete.\n" );
 	}
 
-	// End Simulation Timer
-#ifndef ALIGNED_WORK
-	omp_end = omp_get_wtime();
-#endif
+    // End Simulation Timer
+	omp_end = get_time();
 
 	// =====================================================================
 	// Output Results & Finalize
