@@ -53,7 +53,7 @@ unsigned long long run_event_based_simulation(Inputs in, SimulationData SD, int 
 	map(to: SD.nuclide_grid[:SD.length_nuclide_grid])\
 	map(alloc: verification[:in.lookups])
 
-	profile->h2d_time = get_time() - start;
+	profile->host_to_device_time = get_time() - start;
 
 	int nwarmups = in.num_iterations / 10;
 	for (int it = 0; it < in.num_iterations + nwarmups; it++) {
@@ -122,7 +122,7 @@ unsigned long long run_event_based_simulation(Inputs in, SimulationData SD, int 
 	#pragma omp target exit data\
 	map(from: verification[:in.lookups])
 
-	profile->d2h_time = get_time() - start;
+	profile->device_to_host_time = get_time() - start;
 
 	// Reduce validation hash on the host
 	unsigned long long validation_hash = 0;

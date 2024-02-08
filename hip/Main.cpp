@@ -43,7 +43,7 @@ int main( int argc, char* argv[] )
 	// Move data to GPU
 	double start = get_time();
 	SimulationData GSD = move_simulation_data_to_device( in, mype, SD );
-	profile.h2d_time = get_time() - start;
+	profile.host_to_device_time = get_time() - start;
 
 	// =====================================================================
 	// Cross Section (XS) Parallel Lookup Simulation
@@ -111,9 +111,9 @@ int main( int argc, char* argv[] )
 
 	printf("host_to_device_ms,kernel_ms,device_to_host_ms,num_iterations\n");
 	printf("%f,%f,%f,%d\n",
-	       profile.h2d_time*1000,
+	       profile.host_to_device_time*1000,
 	       profile.kernel_time*1000,
-	       profile.d2h_time*1000,
+	       profile.device_to_host_time*1000,
 	       in.num_iterations);
 
 	return is_invalid_result;

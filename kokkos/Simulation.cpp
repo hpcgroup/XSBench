@@ -88,7 +88,7 @@ unsigned long long run_event_based_simulation(Inputs in, SimulationData SD, int 
 			Kokkos::create_mirror_view(d_verification);
 	Kokkos::deep_copy(d_verification, verification);
 
-	profile->h2d_time = get_time() - startP;
+	profile->host_to_device_time = get_time() - startP;
 
 	int nwarmups = in.num_iterations / 10;
 	for (int it = 0; it < in.num_iterations + nwarmups; it++) {
@@ -161,7 +161,7 @@ unsigned long long run_event_based_simulation(Inputs in, SimulationData SD, int 
 
 	Kokkos::deep_copy(verification, d_verification);
 
-	profile->d2h_time = get_time() - startP;
+	profile->device_to_host_time = get_time() - startP;
 
 	// End Simulation Timer
 	*end = start.seconds();

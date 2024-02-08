@@ -41,7 +41,7 @@ unsigned long long run_event_based_simulation_baseline(Inputs in, SimulationData
 
 	start = get_time();
 	gpuErrchk( hipMemcpy(v, GSD.verification, sz, hipMemcpyDeviceToHost) );
-	profile->d2h_time = get_time() - start;
+	profile->device_to_host_time = get_time() - start;
 
 	////////////////////////////////////////////////////////////////////////////////
 	// Reduce Verification Results

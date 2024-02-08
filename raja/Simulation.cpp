@@ -34,7 +34,7 @@ unsigned long long run_event_based_simulation_baseline(Inputs in, SimulationData
 
 	double start = get_time();
         SimulationData GSD = move_simulation_data_to_device(in, mype, SD);
-	profile->h2d_time = get_time() - start;
+	profile->host_to_device_time = get_time() - start;
 
         int nthreads = 256;
         int nblocks = ceil( (double) in.lookups / (double) nthreads);
@@ -99,7 +99,7 @@ unsigned long long run_event_based_simulation_baseline(Inputs in, SimulationData
 
 	start = get_time();
         rm.copy(SD.verification, GSD.verification);
-	profile->d2h_time = get_time() - start;
+	profile->device_to_host_time = get_time() - start;
 
         unsigned long long verification_scalar = 0;
         for(int i = 0; i < in.lookups; i++ )

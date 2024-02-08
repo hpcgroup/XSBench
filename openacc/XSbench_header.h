@@ -84,9 +84,9 @@ typedef struct{
 } SimulationData;
 
 typedef struct{
-	double d2h_time;
+	double device_to_host_time;
 	double kernel_time;
-	double h2d_time;
+	double host_to_device_time;
 } Profile;
 
 // io.c

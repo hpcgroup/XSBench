@@ -78,7 +78,7 @@ unsigned long long run_event_based_simulation(Inputs in, SimulationData SD, int 
 	sycl_q.memcpy(nuclide_grid, SD.nuclide_grid, SD.length_nuclide_grid * sizeof(NuclideGridPoint));
 	sycl_q.wait();
 #endif
-	profile->h2d_time = get_time() - startP;
+	profile->host_to_device_time = get_time() - startP;
 
         if(mype==0) printf("Beginning event based simulation...\n");
 
@@ -182,7 +182,7 @@ unsigned long long run_event_based_simulation(Inputs in, SimulationData SD, int 
 #else
 	sycl_q.memcpy(verification_host, verification, in.lookups * sizeof(int)).wait();
 #endif
-	profile->d2h_time = get_time() - startP;
+	profile->device_to_host_time = get_time() - startP;
 
         // Host reduces the verification array
         unsigned long long verification_scalar = 0;

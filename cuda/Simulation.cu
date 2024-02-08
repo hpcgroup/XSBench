@@ -17,7 +17,7 @@ unsigned long long run_event_based_simulation_baseline(Inputs in, SimulationData
 	double start = get_time();
         // Move Data to GPU
         SimulationData GSD = move_simulation_data_to_device(in, mype, SD);
-	profile->h2d_time = get_time() - start;
+	profile->host_to_device_time = get_time() - start;
 
         ////////////////////////////////////////////////////////////////////////////////
         // Configure & Launch Simulation Kernel
@@ -47,7 +47,7 @@ unsigned long long run_event_based_simulation_baseline(Inputs in, SimulationData
         if( mype == 0)	printf("Reducing verification results...\n");
 	start = get_time();
         gpuErrchk(cudaMemcpy(SD.verification, GSD.verification, in.lookups * sizeof(unsigned long), cudaMemcpyDeviceToHost) );
-	profile->d2h_time = get_time() - start;
+	profile->device_to_host_time = get_time() - start;
 
         unsigned long verification_scalar = 0;
         for( int i =0; i < in.lookups; i++ )
