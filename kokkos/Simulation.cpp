@@ -43,32 +43,32 @@ unsigned long long run_event_based_simulation(Inputs in, SimulationData SD, int 
 	double startP = get_time();
 
 	UIntView u_max_num_nucs(&SD.max_num_nucs, 1);
-        SD.d_max_num_nucs = new IntView("d_max_num_nucs", length_max_num_nucs);
+        SD.d_max_num_nucs = new IntView(Kokkos::ViewAllocateWithoutInitializing("d_max_num_nucs"), length_max_num_nucs);
         Kokkos::deep_copy(*SD.d_max_num_nucs, u_max_num_nucs);
 
         UIntView u_num_nucs(SD.num_nucs, SD.length_num_nucs);
-        SD.d_num_nucs = new IntView("d_num_nucs", SD.length_num_nucs);
+        SD.d_num_nucs = new IntView(Kokkos::ViewAllocateWithoutInitializing("d_num_nucs"), SD.length_num_nucs);
         Kokkos::deep_copy(*SD.d_num_nucs, u_num_nucs);
 
         UDoubleView u_concs(SD.concs, SD.length_concs);
-        SD.d_concs = new DoubleView("d_concs", SD.length_concs);
+        SD.d_concs = new DoubleView(Kokkos::ViewAllocateWithoutInitializing("d_concs"), SD.length_concs);
         Kokkos::deep_copy(*SD.d_concs, u_concs);
 
         UIntView u_mats(SD.mats, SD.length_mats);
-        SD.d_mats = new IntView("d_mats", SD.length_mats);
+        SD.d_mats = new IntView(Kokkos::ViewAllocateWithoutInitializing("d_mats"), SD.length_mats);
         Kokkos::deep_copy(*SD.d_mats, u_mats);
 
         UDoubleView u_unionized_energy_array(SD.unionized_energy_array, SD.length_unionized_energy_array);
-        SD.d_unionized_energy_array = new DoubleView("d_unionized_energy_array",
+        SD.d_unionized_energy_array = new DoubleView(Kokkos::ViewAllocateWithoutInitializing("d_unionized_energy_array"),
 						     SD.length_unionized_energy_array);
         Kokkos::deep_copy(*SD.d_unionized_energy_array, u_unionized_energy_array);
 
         UIntView u_index_grid(SD.index_grid, SD.length_index_grid);
-        SD.d_index_grid = new IntView("d_index_grid", SD.length_index_grid);
+        SD.d_index_grid = new IntView(Kokkos::ViewAllocateWithoutInitializing("d_index_grid"), SD.length_index_grid);
         Kokkos::deep_copy(*SD.d_index_grid, u_index_grid);
 
         UPointView u_nuclide_grid(SD.nuclide_grid, SD.length_nuclide_grid);
-        SD.d_nuclide_grid = new PointView("d_nuclide_grid", SD.length_nuclide_grid);
+        SD.d_nuclide_grid = new PointView(Kokkos::ViewAllocateWithoutInitializing("d_nuclide_grid"), SD.length_nuclide_grid);
         Kokkos::deep_copy(*SD.d_nuclide_grid, u_nuclide_grid);
 
 	IntView num_nucs(*SD.d_num_nucs);
