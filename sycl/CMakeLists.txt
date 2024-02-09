@@ -18,6 +18,11 @@ set(SOURCE Main.cpp io.cpp Simulation.cpp GridInit.cpp XSutils.cpp Materials.cpp
 
 add_executable(XSBench ${SOURCE})
 
+find_package(AdaptiveCpp)
+if (AdaptiveCpp_FOUND)
+  add_sycl_to_target(TARGET XSBench SOURCES ${SOURCE})
+endif ()
+
 separate_arguments(OFFLOAD_FLAGS)
 target_compile_options(XSBench PUBLIC "$<$<CONFIG:RELEASE>:${OFFLOAD_FLAGS}>")
 target_link_options(XSBench PUBLIC "$<$<CONFIG:RELEASE>:${OFFLOAD_FLAGS}>")
