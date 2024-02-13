@@ -1,4 +1,3 @@
-// -*- c-basic-offset: 8; tab-width: 8; indent-tabs-mode: t; -*-
 #ifndef __XSBENCH_HEADER_H__
 #define __XSBENCH_HEADER_H__
 
@@ -16,6 +15,7 @@
 #include<sys/time.h>
 #include<assert.h>
 #include<stdint.h>
+#include "../XSbench_shared_header.h"
 
 // Papi Header
 #ifdef PAPI
@@ -50,20 +50,6 @@ typedef struct{
 } NuclideGridPoint;
 
 typedef struct{
-	int nthreads;
-	long n_isotopes;
-	long n_gridpoints;
-	int lookups;
-	char * HM;
-	int grid_type; // 0: Unionized Grid (default)    1: Nuclide Grid
-	int hash_bins;
-	int particles;
-	int simulation_method;
-	int binary_mode;
-	int kernel_id;
-} Inputs;
-
-typedef struct{
 	int * num_nucs;                     // Length = length_num_nucs;
 	double * concs;                     // Length = length_concs
 	int * mats;                         // Length = length_mats
@@ -96,7 +82,7 @@ void binary_write( Inputs in, SimulationData SD );
 SimulationData binary_read( Inputs in );
 
 // Simulation.c
-unsigned long long run_event_based_simulation(Inputs in, SimulationData SD, int mype, double* end);
+unsigned long long run_event_based_simulation(Inputs in, SimulationData SD, int mype, Profile* profile);
 unsigned long long run_history_based_simulation(Inputs in, SimulationData SD, int mype);
 #pragma acc routine
 void calculate_micro_xs(   double p_energy, int nuc, long n_isotopes,

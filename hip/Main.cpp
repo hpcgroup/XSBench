@@ -1,4 +1,3 @@
-// -*- c-basic-offset: 8; tab-width: 8; indent-tabs-mode: t; -*-
 #include "XSbench_header.h"
 
 int main( int argc, char* argv[] )
@@ -39,12 +38,12 @@ int main( int argc, char* argv[] )
 	if( in.binary_mode == WRITE && mype == 0 )
 		binary_write(in, SD);
 
-#ifdef ALIGNED_WORK
-	omp_start = get_time();
-#endif
+	Profile profile;
 
 	// Move data to GPU
+	double start = get_time();
 	SimulationData GSD = move_simulation_data_to_device( in, mype, SD );
+	profile.host_to_device_time = get_time() - start;
 
 	// =====================================================================
 	// Cross Section (XS) Parallel Lookup Simulation
@@ -61,16 +60,14 @@ int main( int argc, char* argv[] )
 	}
 
 	// Start Simulation Timer
-#ifndef ALIGNED_WORK
 	omp_start = get_time();
-#endif
 
 	// Run simulation
 	if( in.simulation_method == EVENT_BASED )
 	{
 		if( in.kernel_id == 0 )
-			verification = run_event_based_simulation_baseline(in, GSD, mype, &omp_end);
-/*
+			verification = run_event_based_simulation_baseline(in, GSD, mype, &profile);
+		/*
 		else if( in.kernel_id == 1 )
 			verification = run_event_based_simulation_optimization_1(in, GSD, mype);
 		else if( in.kernel_id == 2 )
@@ -83,7 +80,8 @@ int main( int argc, char* argv[] )
 			verification = run_event_based_simulation_optimization_5(in, GSD, mype);
 		else if( in.kernel_id == 6 )
 			verification = run_event_based_simulation_optimization_6(in, GSD, mype);
-*/
+		*/
+
 		else
 		{
 			printf("Error: No kernel ID %d found!\n", in.kernel_id);
@@ -103,15 +101,15 @@ int main( int argc, char* argv[] )
 	}
 
 	// End Simulation Timer
-#ifndef ALIGNED_WORK
 	omp_end = get_time();
-#endif
 
 	// Final Hash Step
 	verification = verification % 999983;
 
 	// Print / Save Results and Exit
 	int is_invalid_result = print_results( in, mype, omp_end-omp_start, nprocs, verification );
+
+	print_profile(profile, in);
 
 	return is_invalid_result;
 }

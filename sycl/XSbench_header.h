@@ -9,8 +9,9 @@
 #include<math.h>
 #include<assert.h>
 #include<stdint.h>
-#include <chrono> 
-#include <sycl/sycl.hpp>
+#include<chrono>
+#include<sycl/sycl.hpp>
+#include "../XSbench_shared_header.h"
 
 // Papi Header
 #ifdef PAPI
@@ -45,20 +46,6 @@ typedef struct{
 } NuclideGridPoint;
 
 typedef struct{
-        int nthreads;
-        long n_isotopes;
-        long n_gridpoints;
-        int lookups;
-        char * HM;
-        int grid_type; // 0: Unionized Grid (default)    1: Nuclide Grid
-        int hash_bins;
-        int particles;
-        int simulation_method;
-        int binary_mode;
-        int kernel_id;
-} Inputs;
-
-typedef struct{
         int * num_nucs;                     // Length = length_num_nucs;
         double * concs;                     // Length = length_concs
         int * mats;                         // Length = length_mats
@@ -91,7 +78,7 @@ void binary_write( Inputs in, SimulationData SD );
 SimulationData binary_read( Inputs in );
 
 // Simulation.c
-unsigned long long run_event_based_simulation(Inputs in, SimulationData SD, int mype, double * kernel_init_time);
+unsigned long long run_event_based_simulation(Inputs in, SimulationData SD, int mype, double * kernel_init_time, Profile* profile);
 int pick_mat(unsigned long * seed);
 double LCG_random_double(uint64_t * seed);
 uint64_t fast_forward_LCG(uint64_t seed, uint64_t n);

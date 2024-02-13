@@ -1,4 +1,3 @@
-// -*- c-basic-offset: 8; tab-width: 8; indent-tabs-mode: t; -*-
 #include "XSbench_header.cuh"
 
 int main(int argc, char *argv[]) {
@@ -38,6 +37,8 @@ int main(int argc, char *argv[]) {
         if (in.binary_mode == WRITE && mype == 0)
                 binary_write(in, SD);
 
+	Profile profile;
+
         // =====================================================================
         // Cross Section (XS) Parallel Lookup Simulation
         // This is the section that should be profiled, as it reflects a
@@ -57,7 +58,7 @@ int main(int argc, char *argv[]) {
         // Run simulation
         if (in.simulation_method == EVENT_BASED) {
                 if (in.kernel_id == 0)
-                        verification = run_event_based_simulation_baseline(in, SD, mype);
+                        verification = run_event_based_simulation_baseline(in, SD, mype, &profile);
                 else if (in.kernel_id == 1)
                         verification = run_event_based_simulation_optimization_1(in, SD, mype);
                 else if (in.kernel_id == 2)
@@ -86,6 +87,7 @@ int main(int argc, char *argv[]) {
                 printf("Simulation complete.\n");
         }
 
+
         // End Simulation Timer
         omp_end = get_time();
 
@@ -99,5 +101,7 @@ int main(int argc, char *argv[]) {
         int is_invalid_result =
                 print_results(in, mype, omp_end - omp_start, nprocs, verification);
 
-        return is_invalid_result;
+	print_profile(profile, in);
+
+	return is_invalid_result;
 }

@@ -2,7 +2,7 @@
 # User Options
 #===============================================================================
 
-RAJA_PATH ?= 
+RAJA_PATH ?=
 Umpire_PATH ?=
 camp_PATH ?=
 TARGET ?= # Choose Target Backend (CUDA, HIP, OpenMP) Default is Sequential
@@ -69,7 +69,7 @@ ifeq ($(TARGET),CUDA)
   RAJA_COMPILER_FLAGS = -x cu --expt-relaxed-constexpr -forward-unknown-to-host-compiler -extended-lambda -restrict -keep -arch=sm_$(SM_VERSION) 
   CXXFLAGS += $(CUDAFLAGS)
   RAJA_LINKER_FLAGS += -Xlinker -rpath=$(RAJA_LIB_DIR) -Xlinker -rpath=$(Umpire_LIB_DIR)
-endif  
+endif
 
 ifeq ($(TARGET),HIP)
   CXX = hipcc
@@ -106,5 +106,3 @@ edit:
 
 run:
 	./$(program)
-
-

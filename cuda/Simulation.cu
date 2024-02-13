@@ -1,4 +1,3 @@
-// -*- c-basic-offset: 8; tab-width: 8; indent-tabs-mode: t; -*-
 #include "XSbench_header.cuh"
 
 ////////////////////////////////////////////////////////////////////////////////////
@@ -13,10 +12,12 @@
 // line argument.
 ////////////////////////////////////////////////////////////////////////////////////
 
-unsigned long long run_event_based_simulation_baseline(Inputs in, SimulationData SD, int mype)
+unsigned long long run_event_based_simulation_baseline(Inputs in, SimulationData SD, int mype, Profile* profile)
 {
+	double start = get_time();
         // Move Data to GPU
         SimulationData GSD = move_simulation_data_to_device(in, mype, SD);
+	profile->host_to_device_time = get_time() - start;
 
         ////////////////////////////////////////////////////////////////////////////////
         // Configure & Launch Simulation Kernel
@@ -26,16 +27,27 @@ unsigned long long run_event_based_simulation_baseline(Inputs in, SimulationData
         int nthreads = 256;
         int nblocks = ceil( (double) in.lookups / (double) nthreads);
 
-
-        xs_lookup_kernel_baseline<<<nblocks, nthreads>>>( in, GSD );
-        gpuErrchk( cudaPeekAtLastError() );
+	int nwarmups = in.num_iterations / 10;
+	start = 0.0;
+	for (int i = 0; i < in.num_iterations + nwarmups; i++) {
+		if (i == nwarmups) {
+			gpuErrchk( cudaDeviceSynchronize() );
+			start = get_time();
+		}
+		xs_lookup_kernel_baseline<<<nblocks, nthreads>>>( in, GSD );
+	}
+	gpuErrchk( cudaPeekAtLastError() );
+	gpuErrchk( cudaDeviceSynchronize() );
+	profile->kernel_time = get_time() - start;
 
         ////////////////////////////////////////////////////////////////////////////////
         // Reduce Verification Results
         ////////////////////////////////////////////////////////////////////////////////
 
         if( mype == 0)	printf("Reducing verification results...\n");
+	start = get_time();
         gpuErrchk(cudaMemcpy(SD.verification, GSD.verification, in.lookups * sizeof(unsigned long), cudaMemcpyDeviceToHost) );
+	profile->device_to_host_time = get_time() - start;
 
         unsigned long verification_scalar = 0;
         for( int i =0; i < in.lookups; i++ )
@@ -388,7 +400,7 @@ __device__ uint64_t fast_forward_LCG(uint64_t seed, uint64_t n)
 ////////////////////////////////////////////////////////////////////////////////////
 // Optimization 1 -- Basic kernel splitting of sampling & lookup routines
 ////////////////////////////////////////////////////////////////////////////////////
-// This optimization requires a little extra data to store all material IDs and 
+// This optimization requires a little extra data to store all material IDs and
 // energies for the sampled particles between kernel calls. By itself, this
 // optimization is likely actually a bit of a slowdown compared to the baseline
 // kernel. However, it will be used by better optimization kernels down the line.
@@ -455,14 +467,14 @@ __global__ void sampling_kernel(Inputs in, SimulationData GSD )
                 return;
 
         // Set the initial seed value
-        uint64_t seed = STARTING_SEED;	
+        uint64_t seed = STARTING_SEED;
 
         // Forward seed to lookup index (we need 2 samples per lookup)
         seed = fast_forward_LCG(seed, 2*i);
 
         // Randomly pick an energy and material for the particle
         double p_energy = LCG_random_double(&seed);
-        int mat         = pick_mat(&seed); 
+        int mat         = pick_mat(&seed);
 
         // Store sample data in state array
         GSD.p_energy_samples[i] = p_energy;
@@ -521,7 +533,7 @@ __global__ void xs_lookup_kernel_optimization_1(Inputs in, SimulationData GSD )
 ////////////////////////////////////////////////////////////////////////////////////
 // This one builds on the first optimization. It uses multiple kernels, one
 // for each material type, to better balance the workload across threads within
-// a warp. This works because each material will have a different number of 
+// a warp. This works because each material will have a different number of
 // isotopes, with some having a ton, meaning that SIMD efficiency can be rather
 // low by default. Better efficiency may be gained in further optimizations by
 // sorting the lookups first.

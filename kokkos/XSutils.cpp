@@ -46,3 +46,13 @@ size_t estimate_mem_usage( Inputs in )
 	return memtotal;
 }
 
+double get_time(void)
+{
+#ifdef MPI
+	return MPI_Wtime();
+#endif
+
+	// If using C++, we can do this:
+	unsigned long us_since_epoch = std::chrono::high_resolution_clock::now().time_since_epoch() / std::chrono::microseconds(1);
+	return (double) us_since_epoch / 1.0e6;
+}

@@ -1,4 +1,3 @@
-// -*- c-basic-offset: 8; tab-width: 8; indent-tabs-mode: t; -*-
 #include "XSbench_header.hpp"
 
 SimulationData grid_init_do_not_profile( Inputs in, int mype )

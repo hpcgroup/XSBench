@@ -1,4 +1,3 @@
-// -*- c-basic-offset: 8; tab-width: 8; indent-tabs-mode: t; -*-
 #include "XSbench_header.hpp"
 
 #ifdef MPI
@@ -21,6 +20,8 @@ int main( int argc, char* argv[] )
 	MPI_Comm_size(MPI_COMM_WORLD, &nprocs);
 	MPI_Comm_rank(MPI_COMM_WORLD, &mype);
 	#endif
+
+	Profile profile;
 
         // Start Kokkos
         Kokkos::initialize();
@@ -72,14 +73,13 @@ int main( int argc, char* argv[] )
 	}
 
 	// Start Simulation Timer
-    
-    double elapsed_time = 0;
-    
+	double elapsed_time = 0;
+
 	// Run simulation
 	if( in.simulation_method == EVENT_BASED )
 	{
 		if( in.kernel_id == 0 )
-			verification = run_event_based_simulation(in, SD, mype, &elapsed_time);
+			verification = run_event_based_simulation(in, SD, mype, &elapsed_time, &profile);
 		else
 		{
 			printf("Error: No kernel ID %d found!\n", in.kernel_id);
@@ -113,6 +113,8 @@ int main( int argc, char* argv[] )
 	#ifdef MPI
 	MPI_Finalize();
 	#endif
+
+	print_profile(profile, in);
 
 	return is_invalid_result;
 }

@@ -15,7 +15,7 @@ void logo(int version)
 	"                    /   \\  `--. \\ ___ \\/ _ \\ '_ \\ / __| '_ \\                    \n"
 	"                   / /^\\ \\/\\__/ / |_/ /  __/ | | | (__| | | |                   \n"
 	"                   \\/   \\/\\____/\\____/ \\___|_| |_|\\___|_| |_|                   \n\n"
-    );
+	       );
 	border_print();
 	center_print("Developed at Argonne National Laboratory", 79);
 	char v[100];
@@ -46,17 +46,17 @@ int print_results( Inputs in, int mype, double runtime, int nprocs,
 	else if( in.simulation_method == EVENT_BASED )
 		lookups = in.lookups;
 	int lookups_per_sec = (int) ((double) lookups / runtime);
-	
+
 	// If running in MPI, reduce timing statistics and calculate average
 	#ifdef MPI
 	int total_lookups = 0;
 	MPI_Barrier(MPI_COMM_WORLD);
 	MPI_Reduce(&lookups_per_sec, &total_lookups, 1, MPI_INT,
-	           MPI_SUM, 0, MPI_COMM_WORLD);
+		   MPI_SUM, 0, MPI_COMM_WORLD);
 	#endif
 
 	int is_invalid_result = 1;
-	
+
 	// Print output
 	if( mype == 0 )
 	{
@@ -65,7 +65,7 @@ int print_results( Inputs in, int mype, double runtime, int nprocs,
 		border_print();
 
 		// Print the results
-    printf("NOTE: Timings are estimated -- use nvprof/nsys/iprof/rocprof for formal analysis\n");
+		printf("NOTE: Timings are estimated -- use nvprof/nsys/iprof/rocprof for formal analysis\n");
 		#ifdef MPI
 		printf("MPI ranks:   %d\n", nprocs);
 		#endif
@@ -83,7 +83,7 @@ int print_results( Inputs in, int mype, double runtime, int nprocs,
 	}
 
 	unsigned long long large = 0;
-	unsigned long long small = 0; 
+	unsigned long long small = 0;
 	if( in.simulation_method == EVENT_BASED )
 	{
 		small = 945990;
@@ -92,7 +92,7 @@ int print_results( Inputs in, int mype, double runtime, int nprocs,
 	else if( in.simulation_method == HISTORY_BASED )
 	{
 		small = 941535;
-		large = 954318; 
+		large = 954318;
 	}
 	if( strcmp(in.HM, "large") == 0 )
 	{
@@ -157,6 +157,7 @@ void print_inputs(Inputs in, int nprocs, int version )
 		printf("XS Lookups per Particle:      "); fancy_int(in.lookups);
 	}
 	printf("Total XS Lookups:             "); fancy_int(in.lookups);
+	printf("Total XS Iterations:          "); fancy_int(in.num_iterations);
 	#ifdef MPI
 	printf("MPI Ranks:                    %d\n", nprocs);
 	printf("Mem Usage per MPI Rank (MB):  "); fancy_int(mem_tot);
@@ -186,22 +187,22 @@ void border_print(void)
 void fancy_int( long a )
 {
     if( a < 1000 )
-        printf("%ld\n",a);
+	printf("%ld\n",a);
 
     else if( a >= 1000 && a < 1000000 )
-        printf("%ld,%03ld\n", a / 1000, a % 1000);
+	printf("%ld,%03ld\n", a / 1000, a % 1000);
 
     else if( a >= 1000000 && a < 1000000000 )
-        printf("%ld,%03ld,%03ld\n",a / 1000000,(a % 1000000) / 1000,a % 1000 );
+	printf("%ld,%03ld,%03ld\n",a / 1000000,(a % 1000000) / 1000,a % 1000 );
 
     else if( a >= 1000000000 )
-        printf("%ld,%03ld,%03ld,%03ld\n",
-               a / 1000000000,
-               (a % 1000000000) / 1000000,
-               (a % 1000000) / 1000,
-               a % 1000 );
+	printf("%ld,%03ld,%03ld,%03ld\n",
+	       a / 1000000000,
+	       (a % 1000000000) / 1000000,
+	       (a % 1000000) / 1000,
+	       a % 1000 );
     else
-        printf("%ld\n",a);
+	printf("%ld\n",a);
 }
 
 void print_CLI_error(void)
@@ -217,7 +218,8 @@ void print_CLI_error(void)
 	printf("  -h <hash bins>           Number of hash bins (only relevant when used with \"-G hash\")\n");
 	printf("  -b <binary mode>         Read or write all data structures to file. If reading, this will skip initialization phase. (read, write)\n");
 	printf("  -k <kernel ID>           Specifies which kernel to run. 0 is baseline, 1, 2, etc are optimized variants. (0 is default.)\n");
-	printf("Default is equivalent to: -m history -s large -l 34 -p 500000 -G unionized\n");
+	printf("  -n <num iterations>      Specifies how many kernel iterations to run. (1 is default.)\n");
+	printf("Default is equivalent to: -m history -s large -l 34 -p 500000 -G unionized -n 1\n");
 	printf("See readme for full description of default run values\n");
 	exit(4);
 }
@@ -228,22 +230,22 @@ Inputs read_CLI( int argc, char * argv[] )
 
 	// defaults to the history based simulation method
 	input.simulation_method = HISTORY_BASED;
-	
-	// defaults to max threads on the system	
+
+	// defaults to max threads on the system
 	input.nthreads = 1;
-	
+
 	// defaults to 355 (corresponding to H-M Large benchmark)
 	input.n_isotopes = 355;
-	
+
 	// defaults to 11303 (corresponding to H-M Large benchmark)
 	input.n_gridpoints = 11303;
 
 	// defaults to 500,000
 	input.particles = 500000;
-	
+
 	// defaults to 34
 	input.lookups = 34;
-	
+
 	// default to unionized grid
 	input.grid_type = UNIONIZED;
 
@@ -252,25 +254,28 @@ Inputs read_CLI( int argc, char * argv[] )
 
 	// default to no binary read/write
 	input.binary_mode = NONE;
-	
+
 	// defaults to baseline kernel
 	input.kernel_id = 0;
-	
+
+	// default to one kernel iteration
+	input.num_iterations = 1;
+
 	// defaults to H-M Large benchmark
 	input.HM = (char *) malloc( 6 * sizeof(char) );
-	input.HM[0] = 'l' ; 
-	input.HM[1] = 'a' ; 
-	input.HM[2] = 'r' ; 
-	input.HM[3] = 'g' ; 
-	input.HM[4] = 'e' ; 
+	input.HM[0] = 'l' ;
+	input.HM[1] = 'a' ;
+	input.HM[2] = 'r' ;
+	input.HM[3] = 'g' ;
+	input.HM[4] = 'e' ;
 	input.HM[5] = '\0';
-	
+
 	// Check if user sets these
 	int user_g = 0;
 
 	int default_lookups = 1;
 	int default_particles = 1;
-	
+
 	// Collect Raw Input
 	for( int i = 1; i < argc; i++ )
 	{
@@ -278,7 +283,7 @@ Inputs read_CLI( int argc, char * argv[] )
 
 		// n_gridpoints (-g)
 		if( strcmp(arg, "-g") == 0 )
-		{	
+		{
 			if( ++i < argc )
 			{
 				user_g = 1;
@@ -343,7 +348,7 @@ Inputs read_CLI( int argc, char * argv[] )
 		}
 		// HM (-s)
 		else if( strcmp(arg, "-s") == 0 )
-		{	
+		{
 			if( ++i < argc )
 				input.HM = argv[i];
 			else
@@ -393,20 +398,30 @@ Inputs read_CLI( int argc, char * argv[] )
 			else
 				print_CLI_error();
 		}
+		// number of kernel iterations (-n)
+		else if( strcmp(arg, "-n") == 0 )
+		{
+			if( ++i < argc)
+			{
+				input.num_iterations = atoi(argv[i]);
+			}
+			else
+				print_CLI_error();
+		}
 		else
 			print_CLI_error();
 	}
 
 	// Validate Input
-	
+
 	// Validate nthreads
 	if( input.nthreads < 1 )
 		print_CLI_error();
-	
+
 	// Validate n_isotopes
 	if( input.n_isotopes < 1 )
 		print_CLI_error();
-	
+
 	// Validate n_gridpoints
 	if( input.n_gridpoints < 1 )
 		print_CLI_error();
@@ -415,17 +430,21 @@ Inputs read_CLI( int argc, char * argv[] )
 	if( input.lookups < 1 )
 		print_CLI_error();
 
-	// Validate Hash Bins 
+	// Validate Hash Bins
 	if( input.hash_bins < 1 )
 		print_CLI_error();
-	
+
+	// Validate number of iterations
+	if ( input.num_iterations < 1 )
+		print_CLI_error();
+
 	// Validate HM size
 	if( strcasecmp(input.HM, "small") != 0 &&
 		strcasecmp(input.HM, "large") != 0 &&
 		strcasecmp(input.HM, "XL") != 0 &&
 		strcasecmp(input.HM, "XXL") != 0 )
 		print_CLI_error();
-	
+
 	// Set HM size specific parameters
 	// (defaults to large)
 	if( strcasecmp(input.HM, "small") == 0 )
@@ -452,7 +471,7 @@ void binary_write( Inputs in, SimulationData SD )
 	fwrite(SD.num_nucs,       sizeof(int), SD.length_num_nucs, fp);
 	fwrite(SD.concs,          sizeof(double), SD.length_concs, fp);
 	fwrite(SD.mats,           sizeof(int), SD.length_mats, fp);
-	fwrite(SD.nuclide_grid,   sizeof(NuclideGridPoint), SD.length_nuclide_grid, fp); 
+	fwrite(SD.nuclide_grid,   sizeof(NuclideGridPoint), SD.length_nuclide_grid, fp);
 	fwrite(SD.index_grid, sizeof(int), SD.length_index_grid, fp);
 	fwrite(SD.unionized_energy_array, sizeof(double), SD.length_unionized_energy_array, fp);
 
@@ -462,7 +481,7 @@ void binary_write( Inputs in, SimulationData SD )
 SimulationData binary_read( Inputs in )
 {
 	SimulationData SD;
-	
+
 	char * fname = "XS_data.dat";
 	printf("Reading all data structures from binary file %s...\n", fname);
 
@@ -484,7 +503,7 @@ SimulationData binary_read( Inputs in )
 	fread(SD.num_nucs,       sizeof(int), SD.length_num_nucs, fp);
 	fread(SD.concs,          sizeof(double), SD.length_concs, fp);
 	fread(SD.mats,           sizeof(int), SD.length_mats, fp);
-	fread(SD.nuclide_grid,   sizeof(NuclideGridPoint), SD.length_nuclide_grid, fp); 
+	fread(SD.nuclide_grid,   sizeof(NuclideGridPoint), SD.length_nuclide_grid, fp);
 	fread(SD.index_grid, sizeof(int), SD.length_index_grid, fp);
 	fread(SD.unionized_energy_array, sizeof(double), SD.length_unionized_energy_array, fp);
 

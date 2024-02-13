@@ -1,4 +1,3 @@
-// -*- c-basic-offset: 8; tab-width: 8; indent-tabs-mode: t; -*-
 #include "XSbench_header.cuh"
 
 // Moves all required data structures to the GPU's memory space
@@ -148,12 +147,12 @@ SimulationData grid_init_do_not_profile( Inputs in, int mype )
 
         // error debug check
         /*
-    for( int i = 0; i < in.n_isotopes; i++ )
-    {
-        printf("NUCLIDE %d ==============================\n", i);
-        for( int j = 0; j < in.n_gridpoints; j++ )
-            printf("E%d = %lf\n", j, SD.nuclide_grid[i * in.n_gridpoints + j].energy);
-    }
+        for( int i = 0; i < in.n_isotopes; i++ )
+        {
+                printf("NUCLIDE %d ==============================\n", i);
+                for( int j = 0; j < in.n_gridpoints; j++ )
+                printf("E%d = %lf\n", j, SD.nuclide_grid[i * in.n_gridpoints + j].energy);
+        }
         */
 
         // Allocate Verification Array

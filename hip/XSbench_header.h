@@ -1,4 +1,3 @@
-// -*- c-basic-offset: 8; tab-width: 8; indent-tabs-mode: t; -*-
 #include "hip/hip_runtime.h"
 #ifndef __XSBENCH_HEADER_H__
 #define __XSBENCH_HEADER_H__
@@ -9,7 +8,8 @@
 #include<assert.h>
 #include<hip/hip_runtime.h>
 #include<stdint.h>
-#include <chrono> 
+#include <chrono>
+#include "../XSbench_shared_header.h"
 
 // Grid types
 #define UNIONIZED 0
@@ -49,20 +49,6 @@ typedef struct{
 } NuclideGridPoint;
 
 typedef struct{
-	int nthreads;
-	long n_isotopes;
-	long n_gridpoints;
-	int lookups;
-	char * HM;
-	int grid_type; // 0: Unionized Grid (default)    1: Nuclide Grid
-	int hash_bins;
-	int particles;
-	int simulation_method;
-	int binary_mode;
-	int kernel_id;
-} Inputs;
-
-typedef struct{
 	int * num_nucs;                     // Length = length_num_nucs;
 	double * concs;                     // Length = length_concs
 	int * mats;                         // Length = length_mats
@@ -97,20 +83,20 @@ void binary_write( Inputs in, SimulationData SD );
 SimulationData binary_read( Inputs in );
 
 // Simulation.cu
-unsigned long long run_event_based_simulation_baseline(Inputs in, SimulationData SD, int mype, double* end);
+unsigned long long run_event_based_simulation_baseline(Inputs in, SimulationData SD, int mype, Profile* profile);
 __global__ void xs_lookup_kernel_baseline(Inputs in, SimulationData GSD );
 __device__ void calculate_micro_xs(   double p_energy, int nuc, long n_isotopes,
-                           long n_gridpoints,
-                           double * __restrict__ egrid, int * __restrict__ index_data,
-                           NuclideGridPoint * __restrict__ nuclide_grids,
-                           long idx, double * __restrict__ xs_vector, int grid_type, int hash_bins );
+				   long n_gridpoints,
+				   double * __restrict__ egrid, int * __restrict__ index_data,
+				   NuclideGridPoint * __restrict__ nuclide_grids,
+				   long idx, double * __restrict__ xs_vector, int grid_type, int hash_bins );
 __device__ void calculate_macro_xs( double p_energy, int mat, long n_isotopes,
-                         long n_gridpoints, int * __restrict__ num_nucs,
-                         double * __restrict__ concs,
-                         double * __restrict__ egrid, int * __restrict__ index_data,
-                         NuclideGridPoint * __restrict__ nuclide_grids,
-                         int * __restrict__ mats,
-                         double * __restrict__ macro_xs_vector, int grid_type, int hash_bins, int max_num_nucs );
+				   long n_gridpoints, int * __restrict__ num_nucs,
+				   double * __restrict__ concs,
+				   double * __restrict__ egrid, int * __restrict__ index_data,
+				   NuclideGridPoint * __restrict__ nuclide_grids,
+				   int * __restrict__ mats,
+				   double * __restrict__ macro_xs_vector, int grid_type, int hash_bins, int max_num_nucs );
 __device__ long grid_search( long n, double quarry, double * __restrict__ A);
 __host__ __device__ long grid_search_nuclide( long n, double quarry, NuclideGridPoint * A, long low, long high);
 __device__ int pick_mat( uint64_t * seed );
@@ -140,6 +126,8 @@ unsigned long long run_event_based_simulation_optimization_6(Inputs in, Simulati
 // GridInit.cu
 SimulationData grid_init_do_not_profile( Inputs in, int mype );
 SimulationData move_simulation_data_to_device( Inputs in, int mype, SimulationData SD );
+void release_device_memory(SimulationData GSD);
+void release_memory(SimulationData SD);
 
 // XSutils.cu
 int NGP_compare( const void * a, const void * b );

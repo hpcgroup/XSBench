@@ -1,4 +1,3 @@
-// -*- c-basic-offset: 8; tab-width: 8; indent-tabs-mode: t; -*-
 #include "XSbench_header.h"
 
 #ifdef MPI
@@ -69,14 +68,16 @@ int main( int argc, char* argv[] )
 		border_print();
 	}
 
-    // Start Simulation Timer
+	Profile profile;
+
+	// Start Simulation Timer
 	omp_start = get_time();
 
 	// Run simulation
 	if( in.simulation_method == EVENT_BASED )
 	{
 		if( in.kernel_id == 0 )
-			verification = run_event_based_simulation(in, SD, mype, &omp_end);
+			verification = run_event_based_simulation(in, SD, mype, &profile);
 		else
 		{
 			printf("Error: No kernel ID %d found!\n", in.kernel_id);
@@ -111,6 +112,8 @@ int main( int argc, char* argv[] )
 	#ifdef MPI
 	MPI_Finalize();
 	#endif
+
+	print_profile(profile, in);
 
 	return is_invalid_result;
 }

@@ -1,18 +1,17 @@
-// -*- c-basic-offset: 8; tab-width: 8; indent-tabs-mode: t; -*-
 #ifndef __XSBENCH_HEADER_H__
 #define __XSBENCH_HEADER_H__
 
 #include<stdio.h>
 #include<stdlib.h>
-#include<time.h>
 #include<string.h>
 #include<strings.h>
 #include<math.h>
 #include<omp.h>
 #include<unistd.h>
-#include<sys/time.h>
+#include<chrono>
 #include<assert.h>
 #include<stdint.h>
+#include "../XSbench_shared_header.h"
 
 #include <Kokkos_Core.hpp>
 
@@ -47,20 +46,6 @@ typedef struct{
 	double fission_xs;
 	double nu_fission_xs;
 } NuclideGridPoint;
-
-typedef struct{
-	int nthreads;
-	long n_isotopes;
-	long n_gridpoints;
-	int lookups;
-	char * HM;
-	int grid_type; // 0: Unionized Grid (default)    1: Nuclide Grid
-	int hash_bins;
-	int particles;
-	int simulation_method;
-	int binary_mode;
-	int kernel_id;
-} Inputs;
 
 typedef Kokkos::View<int*> IntView;
 typedef Kokkos::View<double*> DoubleView;
@@ -112,7 +97,7 @@ void binary_write( Inputs in, SimulationData SD );
 SimulationData binary_read( Inputs in );
 
 // Simulation.c
-unsigned long long run_event_based_simulation(Inputs in, SimulationData SD, int mype, double* end);
+unsigned long long run_event_based_simulation(Inputs in, SimulationData SD, int mype, double* end, Profile* profile);
 unsigned long long run_history_based_simulation(Inputs in, SimulationData SD, int mype);
 KOKKOS_INLINE_FUNCTION
 void calculate_micro_xs(   double p_energy, int nuc, long n_isotopes,
@@ -148,6 +133,7 @@ SimulationData grid_init_do_not_profile( Inputs in, int mype );
 int NGP_compare( const void * a, const void * b );
 int double_compare(const void * a, const void * b);
 size_t estimate_mem_usage( Inputs in );
+double get_time(void);
 
 // Materials.c
 int * load_num_nucs(long n_isotopes);

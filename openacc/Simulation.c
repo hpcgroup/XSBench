@@ -1,4 +1,3 @@
-// -*- c-basic-offset: 8; tab-width: 8; indent-tabs-mode: t; -*-
 #include "XSbench_header.h"
 
 ////////////////////////////////////////////////////////////////////////////////////
@@ -12,7 +11,7 @@
 // are not yet implemented for this OpenMP targeting offload port.
 ////////////////////////////////////////////////////////////////////////////////////
 
-unsigned long long run_event_based_simulation(Inputs in, SimulationData SD, int mype, double* end)
+unsigned long long run_event_based_simulation(Inputs in, SimulationData SD, int mype, Profile* profile)
 {
 	if( mype == 0)
 		printf("Beginning event based simulation...\n");
@@ -42,66 +41,89 @@ unsigned long long run_event_based_simulation(Inputs in, SimulationData SD, int 
 	////////////////////////////////////////////////////////////////////////////////
 	unsigned long long * verification = (unsigned long long *) malloc(in.lookups * sizeof(unsigned long long));
 
-    #pragma acc parallel loop\
-        copyin(SD.max_num_nucs, SD.num_nucs[:SD.length_num_nucs], SD.concs[:SD.length_concs], \
-	           SD.mats[:SD.length_mats], SD.unionized_energy_array[:SD.length_unionized_energy_array], \
-	           SD.index_grid[:SD.length_index_grid], SD.nuclide_grid[:SD.length_nuclide_grid]) \
-        copyout(verification[:in.lookups])
-	for( int i = 0; i < in.lookups; i++ )
-	{
-		// Set the initial seed value
-		uint64_t seed = STARTING_SEED;
+	double start = get_time();
 
-		// Forward seed to lookup index (we need 2 samples per lookup)
-		seed = fast_forward_LCG(seed, 2*i);
+	#pragma acc enter data\
+	copyin( SD)\
+        copyin( SD.max_num_nucs)\
+	copyin( SD.num_nucs[0:SD.length_num_nucs])\
+	copyin( SD.concs[0:SD.length_concs])\
+	copyin( SD.mats[0:SD.length_mats])\
+	copyin( SD.unionized_energy_array[0:SD.length_unionized_energy_array])\
+	copyin( SD.index_grid[0:SD.length_index_grid])\
+	copyin( SD.nuclide_grid[0:SD.length_nuclide_grid])\
+	create( verification[0:in.lookups])
 
-		// Randomly pick an energy and material for the particle
-		double p_energy = LCG_random_double(&seed);
-		int mat         = pick_mat(&seed);
+	profile->host_to_device_time = get_time() - start;
 
-		// debugging
-		//printf("E = %lf mat = %d\n", p_energy, mat);
-
-		double macro_xs_vector[5] = {0};
-
-		// Perform macroscopic Cross Section Lookup
-		calculate_macro_xs(
-				p_energy,        // Sampled neutron energy (in lethargy)
-				mat,             // Sampled material type index neutron is in
-				in.n_isotopes,   // Total number of isotopes in simulation
-				in.n_gridpoints, // Number of gridpoints per isotope in simulation
-				SD.num_nucs,     // 1-D array with number of nuclides per material
-				SD.concs,        // Flattened 2-D array with concentration of each nuclide in each material
-				SD.unionized_energy_array, // 1-D Unionized energy array
-				SD.index_grid,   // Flattened 2-D grid holding indices into nuclide grid for each unionized energy level
-				SD.nuclide_grid, // Flattened 2-D grid holding energy levels and XS_data for all nuclides in simulation
-				SD.mats,         // Flattened 2-D array with nuclide indices defining composition of each type of material
-				macro_xs_vector, // 1-D array with result of the macroscopic cross section (5 different reaction channels)
-				in.grid_type,    // Lookup type (nuclide, hash, or unionized)
-				in.hash_bins,    // Number of hash bins used (if using hash lookup type)
-				SD.max_num_nucs  // Maximum number of nuclides present in any material
-				);
-
-		// For verification, and to prevent the compiler from optimizing
-		// all work out, we interrogate the returned macro_xs_vector array
-		// to find its maximum value index, then increment the verification
-		// value by that index. In this implementation, we prevent thread
-		// contention by using an OMP reduction on the verification value.
-		// For accelerators, a different approach might be required
-		// (e.g., atomics, reduction of thread-specific values in large
-		// array via CUDA thrust, etc).
-		double max = -1.0;
-		int max_idx = 0;
-		for(int j = 0; j < 5; j++ )
+	int nwarmups = in.num_iterations / 10;
+	for (int it = 0; it < in.num_iterations + nwarmups; it++) {
+		if (it == nwarmups) start = get_time();
+		#pragma acc parallel loop
+		for( int i = 0; i < in.lookups; i++ )
 		{
-			if( macro_xs_vector[j] > max )
+			// Set the initial seed value
+			uint64_t seed = STARTING_SEED;
+
+			// Forward seed to lookup index (we need 2 samples per lookup)
+			seed = fast_forward_LCG(seed, 2*i);
+
+			// Randomly pick an energy and material for the particle
+			double p_energy = LCG_random_double(&seed);
+			int mat         = pick_mat(&seed);
+
+			// debugging
+			//printf("E = %lf mat = %d\n", p_energy, mat);
+
+			double macro_xs_vector[5] = {0};
+
+			// Perform macroscopic Cross Section Lookup
+			calculate_macro_xs(
+					p_energy,        // Sampled neutron energy (in lethargy)
+					mat,             // Sampled material type index neutron is in
+					in.n_isotopes,   // Total number of isotopes in simulation
+					in.n_gridpoints, // Number of gridpoints per isotope in simulation
+					SD.num_nucs,     // 1-D array with number of nuclides per material
+					SD.concs,        // Flattened 2-D array with concentration of each nuclide in each material
+					SD.unionized_energy_array, // 1-D Unionized energy array
+					SD.index_grid,   // Flattened 2-D grid holding indices into nuclide grid for each unionized energy level
+					SD.nuclide_grid, // Flattened 2-D grid holding energy levels and XS_data for all nuclides in simulation
+					SD.mats,         // Flattened 2-D array with nuclide indices defining composition of each type of material
+					macro_xs_vector, // 1-D array with result of the macroscopic cross section (5 different reaction channels)
+					in.grid_type,    // Lookup type (nuclide, hash, or unionized)
+					in.hash_bins,    // Number of hash bins used (if using hash lookup type)
+					SD.max_num_nucs  // Maximum number of nuclides present in any material
+					);
+
+			// For verification, and to prevent the compiler from optimizing
+			// all work out, we interrogate the returned macro_xs_vector array
+			// to find its maximum value index, then increment the verification
+			// value by that index. In this implementation, we prevent thread
+			// contention by using an OMP reduction on the verification value.
+			// For accelerators, a different approach might be required
+			// (e.g., atomics, reduction of thread-specific values in large
+			// array via CUDA thrust, etc).
+			double max = -1.0;
+			int max_idx = 0;
+			for(int j = 0; j < 5; j++ )
 			{
-				max = macro_xs_vector[j];
-				max_idx = j;
+				if( macro_xs_vector[j] > max )
+				{
+					max = macro_xs_vector[j];
+					max_idx = j;
+				}
 			}
+			verification[i] = max_idx+1;
 		}
-		verification[i] = max_idx+1;
 	}
+	profile->kernel_time = get_time() - start;
+
+	start = get_time();
+
+	#pragma acc exit data\
+	copyout( verification[0:in.lookups])
+
+	profile->device_to_host_time = get_time() - start;
 
 	// Reduce validation hash on the host
 	unsigned long long validation_hash = 0;
