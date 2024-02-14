@@ -272,8 +272,14 @@ Inputs read_CLI( int argc, char * argv[] )
         // defaults to baseline kernel
         input.kernel_id = 0;
 
-	// defaults to one kernel iteration
-	input.num_iterations = 1;
+	      // defaults to one kernel iteration
+	      input.num_iterations = 1;
+	      
+        // default to zero warmup iterations
+	      input.num_warmups = 1;
+
+        // default to stdout
+        strcpy(input.filename, "STDOUT");
 
         // defaults to H-M Large benchmark
         input.HM = (char *) malloc( 6 * sizeof(char) );
@@ -421,6 +427,22 @@ Inputs read_CLI( int argc, char * argv[] )
 			}
 			else
 			print_CLI_error();
+		}
+		else if( strcmp(arg, "--csv") == 0 )
+		{
+			if( ++i < argc )
+        strcpy(input.filename, argv[i]);
+			else
+				print_CLI_error();
+    }
+		else if( strcmp(arg, "-w") == 0 )
+		{
+			if( ++i < argc)
+			{
+				input.num_warmups = atoi(argv[i]);
+			}
+			else
+				print_CLI_error();
 		}
                 else
                 print_CLI_error();
