@@ -220,6 +220,8 @@ void print_CLI_error(void)
 	printf("  -b <binary mode>         Read or write all data structures to file. If reading, this will skip initialization phase. (read, write)\n");
 	printf("  -k <kernel ID>           Specifies which kernel to run. 0 is baseline, 1, 2, etc are optimized variants. (0 is default.)\n");
 	printf("  -n <num iterations>      Specifies how many kernel iterations to run. (1 is default.)\n");
+	printf("  -w <num warmups>         Specifies how many warmup iterations to run. (0 is default.)\n");
+	printf("  --csv <file path>        Save output to csv file. (Default is stdout)\n");
 	printf("Default is equivalent to: -m history -s large -l 34 -p 500000 -G unionized -k 0 -n 1\n");
 	printf("See readme for full description of default run values\n");
 	exit(4);
@@ -261,6 +263,12 @@ Inputs read_CLI( int argc, char * argv[] )
 
 	// default to one kernel iteration
 	input.num_iterations = 1;
+
+	// default to zero warmup iterations
+	input.num_iterations = 1;
+
+  // default to stdout
+  strcpy(input.filename, "STDOUT");
 
 	// defaults to H-M Large benchmark
 	input.HM = (char *) malloc( 6 * sizeof(char) );
@@ -405,6 +413,22 @@ Inputs read_CLI( int argc, char * argv[] )
 			if( ++i < argc)
 			{
 				input.num_iterations = atoi(argv[i]);
+			}
+			else
+				print_CLI_error();
+		}
+		else if( strcmp(arg, "--csv") == 0 )
+		{
+			if( ++i < argc )
+        strcpy(input.filename, argv[i]);
+			else
+				print_CLI_error();
+    }
+		else if( strcmp(arg, "-w") == 0 )
+		{
+			if( ++i < argc)
+			{
+				input.num_warmups = atoi(argv[i]);
 			}
 			else
 				print_CLI_error();
