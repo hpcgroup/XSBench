@@ -284,6 +284,13 @@ Inputs read_CLI( int argc, char * argv[] )
         input.HM[4] = 'e' ; 
         input.HM[5] = '\0';
 
+  
+	    // default to zero warmup iterations
+	input.num_iterations = 1;
+
+  // default to stdout
+  strcpy(input.filename, "STDOUT");
+
         // Check if user sets these
         int user_g = 0;
 
@@ -421,6 +428,22 @@ Inputs read_CLI( int argc, char * argv[] )
 			}
 			else
 			print_CLI_error();
+		}
+		else if( strcmp(arg, "--csv") == 0 )
+		{
+			if( ++i < argc )
+        strcpy(input.filename, argv[i]);
+			else
+				print_CLI_error();
+    }
+		else if( strcmp(arg, "-w") == 0 )
+		{
+			if( ++i < argc)
+			{
+				input.num_warmups = atoi(argv[i]);
+			}
+			else
+				print_CLI_error();
 		}
                 else
                 print_CLI_error();

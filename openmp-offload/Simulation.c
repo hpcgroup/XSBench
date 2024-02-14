@@ -55,7 +55,7 @@ unsigned long long run_event_based_simulation(Inputs in, SimulationData SD, int 
 
 	profile->host_to_device_time = get_time() - start;
 
-	int nwarmups = in.num_iterations / 10;
+	int nwarmups = in.num_warmups;
 	for (int it = 0; it < in.num_iterations + nwarmups; it++) {
 		if (it == nwarmups) start = get_time();
 		#pragma omp target teams distribute parallel for
