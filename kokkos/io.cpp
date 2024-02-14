@@ -276,8 +276,8 @@ Inputs read_CLI( int argc, char * argv[] )
 	int default_lookups = 1;
 	int default_particles = 1;
   
-	// default to zero warmup iterations
-	input.num_iterations = 1;
+  // default to zero warmup iterations
+	input.num_warmups = 1;
 
   // default to stdout
   strcpy(input.filename, "STDOUT");

@@ -266,6 +266,12 @@ Inputs read_CLI( int argc, char * argv[] )
 
 	// defaults to one kernel iteration
 	input.num_iterations = 1;
+   
+	// default to zero warmup iterations
+	input.num_warmups = 1;
+
+  // default to stdout
+  strcpy(input.filename, "STDOUT");
 
         // defaults to H-M Large benchmark
         input.HM = (char *) malloc( 6 * sizeof(char) );
@@ -283,11 +289,6 @@ Inputs read_CLI( int argc, char * argv[] )
         int default_particles = 1;
 
   
-	// default to zero warmup iterations
-	input.num_iterations = 1;
-
-  // default to stdout
-  strcpy(input.filename, "STDOUT");
 
         // Collect Raw Input
         for( int i = 1; i < argc; i++ )

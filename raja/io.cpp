@@ -272,8 +272,14 @@ Inputs read_CLI( int argc, char * argv[] )
         // defaults to baseline kernel
         input.kernel_id = 0;
 
-	// defaults to one kernel iteration
-	input.num_iterations = 1;
+	      // defaults to one kernel iteration
+	      input.num_iterations = 1;
+	      
+        // default to zero warmup iterations
+	      input.num_warmups = 1;
+
+        // default to stdout
+        strcpy(input.filename, "STDOUT");
 
         // defaults to H-M Large benchmark
         input.HM = (char *) malloc( 6 * sizeof(char) );
@@ -283,13 +289,6 @@ Inputs read_CLI( int argc, char * argv[] )
         input.HM[3] = 'g' ; 
         input.HM[4] = 'e' ; 
         input.HM[5] = '\0';
-
-  
-	    // default to zero warmup iterations
-	input.num_iterations = 1;
-
-  // default to stdout
-  strcpy(input.filename, "STDOUT");
 
         // Check if user sets these
         int user_g = 0;

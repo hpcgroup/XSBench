@@ -262,7 +262,7 @@ Inputs read_CLI( int argc, char * argv[] )
 	input.num_iterations = 1;
   // 
 	// default to zero warmup iterations
-	input.num_iterations = 1;
+	input.num_warmups = 1;
 
   // default to stdout
   strcpy(input.filename, "STDOUT");
