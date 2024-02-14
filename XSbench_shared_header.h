@@ -15,7 +15,9 @@ typedef struct{
         int simulation_method;
         int binary_mode;
         int kernel_id;
-	int num_iterations;
+        int num_iterations;
+        int num_warmups;
+        char filename[128]; // I don't think we need super large file names
 } Inputs;
 
 typedef struct{
@@ -25,12 +27,25 @@ typedef struct{
 } Profile;
 
 inline void print_profile(Profile profile, Inputs in) {
-	printf("host_to_device_ms,kernel_ms,device_to_host_ms,num_iterations\n");
-	printf("%f,%f,%f,%d\n",
-	       profile.host_to_device_time*1000,
-	       profile.kernel_time*1000,
-	       profile.device_to_host_time*1000,
-	       in.num_iterations);
+  FILE* output;
+  if (strcmp(in.filename, "STDOUT") != 0) {
+     output = fopen(in.filename, "w");
+	   fprintf(output, "host_to_device_ms,kernel_ms,device_to_host_ms,num_iterations,num_warmups\n");
+	   fprintf(output, "%f,%f,%f,%d,%d\n",
+	          profile.host_to_device_time*1000,
+	          profile.kernel_time*1000,
+	          profile.device_to_host_time*1000,
+	          in.num_iterations,
+            in.num_warmups);
+  } else {
+	   printf("host_to_device_ms,kernel_ms,device_to_host_ms,num_iterations,num_warmups\n");
+	   printf("%f,%f,%f,%d,%d\n",
+	          profile.host_to_device_time*1000,
+	          profile.kernel_time*1000,
+	          profile.device_to_host_time*1000,
+	          in.num_iterations,
+            in.num_warmups);
+  }
 }
 
 #endif // XSBENCH_SHARED_HEADER_H
