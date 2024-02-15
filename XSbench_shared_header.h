@@ -36,6 +36,7 @@ inline void print_profile(Profile profile, Inputs in) {
             profile.device_to_host_time*1000,
             in.num_iterations,
             in.num_warmups);
+    fclose(output);
   }
   else {
     printf("host_to_device_ms,kernel_ms,device_to_host_ms,num_iterations,num_warmups\n");
