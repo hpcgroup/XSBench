@@ -43,23 +43,28 @@ unsigned long long run_event_based_simulation(Inputs in, SimulationData SD, int 
 
 	double start = get_time();
 
-	#pragma acc enter data\
-	copyin( SD)\
-        copyin( SD.max_num_nucs)\
-	copyin( SD.num_nucs[0:SD.length_num_nucs])\
-	copyin( SD.concs[0:SD.length_concs])\
-	copyin( SD.mats[0:SD.length_mats])\
-	copyin( SD.unionized_energy_array[0:SD.length_unionized_energy_array])\
-	copyin( SD.index_grid[0:SD.length_index_grid])\
-	copyin( SD.nuclide_grid[0:SD.length_nuclide_grid])\
-	create( verification[0:in.lookups])
+  int *num_nucs = SD.num_nucs;
+  double *concs = SD.concs;
+  int *mats = SD.mats;
+  double *unionized_energy_array = SD.unionized_energy_array;
+  int *index_grid = SD.index_grid;
+  NuclideGridPoint *nuclide_grid = SD.nuclide_grid;
+
+  #pragma acc enter data \
+    copyin(num_nucs[:SD.length_num_nucs], concs[:SD.length_concs], \
+           mats[:SD.length_mats], unionized_energy_array[:SD.length_unionized_energy_array], \
+           index_grid[:SD.length_index_grid], nuclide_grid[:SD.length_nuclide_grid]) \
+    create(verification[:in.lookups])
 
 	profile->host_to_device_time = get_time() - start;
 
   int nwarmups = in.num_warmups;
 	for (int it = 0; it < in.num_iterations + nwarmups; it++) {
 		if (it == nwarmups) start = get_time();
-		#pragma acc parallel loop
+		#pragma acc parallel loop \
+      present(num_nucs[:SD.length_num_nucs], concs[:SD.length_concs], \
+           mats[:SD.length_mats], unionized_energy_array[:SD.length_unionized_energy_array], \
+           index_grid[:SD.length_index_grid], nuclide_grid[:SD.length_nuclide_grid], verification[:in.lookups]) 
 		for( int i = 0; i < in.lookups; i++ )
 		{
 			// Set the initial seed value
@@ -83,12 +88,12 @@ unsigned long long run_event_based_simulation(Inputs in, SimulationData SD, int 
 					mat,             // Sampled material type index neutron is in
 					in.n_isotopes,   // Total number of isotopes in simulation
 					in.n_gridpoints, // Number of gridpoints per isotope in simulation
-					SD.num_nucs,     // 1-D array with number of nuclides per material
-					SD.concs,        // Flattened 2-D array with concentration of each nuclide in each material
-					SD.unionized_energy_array, // 1-D Unionized energy array
-					SD.index_grid,   // Flattened 2-D grid holding indices into nuclide grid for each unionized energy level
-					SD.nuclide_grid, // Flattened 2-D grid holding energy levels and XS_data for all nuclides in simulation
-					SD.mats,         // Flattened 2-D array with nuclide indices defining composition of each type of material
+					num_nucs,     // 1-D array with number of nuclides per material
+					concs,        // Flattened 2-D array with concentration of each nuclide in each material
+					unionized_energy_array, // 1-D Unionized energy array
+					index_grid,   // Flattened 2-D grid holding indices into nuclide grid for each unionized energy level
+					nuclide_grid, // Flattened 2-D grid holding energy levels and XS_data for all nuclides in simulation
+					mats,         // Flattened 2-D array with nuclide indices defining composition of each type of material
 					macro_xs_vector, // 1-D array with result of the macroscopic cross section (5 different reaction channels)
 					in.grid_type,    // Lookup type (nuclide, hash, or unionized)
 					in.hash_bins,    // Number of hash bins used (if using hash lookup type)
@@ -120,8 +125,8 @@ unsigned long long run_event_based_simulation(Inputs in, SimulationData SD, int 
 
 	start = get_time();
 
-	#pragma acc exit data\
-	copyout( verification[0:in.lookups])
+	#pragma acc exit data \
+	  copyout(verification[0:in.lookups])
 
 	profile->device_to_host_time = get_time() - start;
 
