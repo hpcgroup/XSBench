@@ -265,7 +265,7 @@ Inputs read_CLI( int argc, char * argv[] )
 	input.num_warmups = 1;
 
   // default to stdout
-  strcpy(input.filename, "STDOUT");
+  input.filename = NULL;
 
 	// defaults to H-M Large benchmark
 	input.HM = (char *) malloc( 6 * sizeof(char) );
@@ -417,7 +417,7 @@ Inputs read_CLI( int argc, char * argv[] )
 		else if( strcmp(arg, "--csv") == 0 )
 		{
 			if( ++i < argc )
-        strcpy(input.filename, argv[i]);
+        input.filename = strdup(argv[i]);
 			else
 				print_CLI_error();
     }

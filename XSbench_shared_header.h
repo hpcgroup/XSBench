@@ -28,7 +28,7 @@ typedef struct{
 
 inline void print_profile(Profile profile, Inputs in) {
   if (in.filename) {
-    FILE* output;
+    FILE* output = fopen(in.filename, "w");
     fprintf(output, "host_to_device_ms,kernel_ms,device_to_host_ms,num_iterations,num_warmups\n");
     fprintf(output, "%f,%f,%f,%d,%d\n",
             profile.host_to_device_time*1000,
