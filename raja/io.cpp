@@ -430,8 +430,10 @@ Inputs read_CLI( int argc, char * argv[] )
 		}
 		else if( strcmp(arg, "--csv") == 0 )
 		{
-			if( ++i < argc )
-        input.filename = strdup(argv[i]);
+			if( ++i < argc ) {
+        input.filename = (char *)malloc(strlen(argv[i]) + 1);
+        strcpy(input.filename, argv[i]);
+      }
 			else
 				print_CLI_error();
     }
