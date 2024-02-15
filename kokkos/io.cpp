@@ -280,7 +280,7 @@ Inputs read_CLI( int argc, char * argv[] )
 	input.num_warmups = 1;
 
   // default to stdout
-  strcpy(input.filename, "STDOUT");
+  input.filename = NULL;
 
 	// Collect Raw Input
 	for( int i = 1; i < argc; i++ )
@@ -416,8 +416,10 @@ Inputs read_CLI( int argc, char * argv[] )
 		}
 		else if( strcmp(arg, "--csv") == 0 )
 		{
-			if( ++i < argc )
+			if( ++i < argc ) {
+        input.filename = (char *)malloc(strlen(argv[i]) + 1);
         strcpy(input.filename, argv[i]);
+      }
 			else
 				print_CLI_error();
     }
