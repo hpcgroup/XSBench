@@ -66,6 +66,9 @@ SimulationData grid_init_do_not_profile( Inputs in, int mype )
         {
                 SD.length_unionized_energy_array = 0;
                 SD.length_index_grid = 0;
+
+                SD.unionized_energy_array = NULL;
+                SD.index_grid = NULL;
         }
 
         if( in.grid_type == UNIONIZED )
@@ -126,6 +129,8 @@ SimulationData grid_init_do_not_profile( Inputs in, int mype )
         {
                 if(mype == 0) printf("Intializing hash grid...\n");
                 SD.length_unionized_energy_array = 0;
+                SD.unionized_energy_array = NULL;
+
                 SD.length_index_grid  = (long) in.hash_bins * (long) in.n_isotopes;
                 SD.index_grid = (int *) malloc( SD.length_index_grid * sizeof(int)); 
                 assert(SD.index_grid != NULL);
