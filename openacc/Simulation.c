@@ -52,9 +52,18 @@ unsigned long long run_event_based_simulation(Inputs in, SimulationData SD, int 
 
   #pragma acc enter data \
     copyin(num_nucs[:SD.length_num_nucs], concs[:SD.length_concs], \
-           mats[:SD.length_mats], unionized_energy_array[:SD.length_unionized_energy_array], \
-           index_grid[:SD.length_index_grid], nuclide_grid[:SD.length_nuclide_grid]) \
+           mats[:SD.length_mats], nuclide_grid[:SD.length_nuclide_grid]) \
     create(verification[:in.lookups])
+
+  if (SD.length_unionized_energy_array != 0) {
+    #pragma acc enter data \
+      copyin(unionized_energy_array[:SD.length_unionized_energy_array])
+  }
+  
+  if (SD.length_index_grid != 0) {
+    #pragma acc enter data \
+      copyin(index_grid[:SD.length_index_grid])
+  }
 
 	profile->host_to_device_time = get_time() - start;
 
