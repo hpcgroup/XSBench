@@ -22,13 +22,13 @@ jobs:
         which sycl-ls
         sycl-ls
     - name: make sycl
-      run: cd sycl; COMPILER=oneapi make -j4
+      run: cd sycl-usm; COMPILER=oneapi make -j4
     - name: run sycl nuclide
-      run: ./sycl/XSBench -m event -s small -G nuclide
+      run: ./sycl-usm/XSBench -m event -s small -G nuclide
     - name: run sycl hash
-      run: ./sycl/XSBench -m event -s small -G hash
+      run: ./sycl-usm/XSBench -m event -s small -G hash
     - name: run sycl unionized
-      run: ./sycl/XSBench -m event -s small -G unionized
+      run: ./sycl-usm/XSBench -m event -s small -G unionized
     - name: make openmp-offload
       run: cd openmp-offload; COMPILER=intel make -j4
     - name: run openmp-offload nuclide
