@@ -51,44 +51,33 @@ unsigned long long run_event_based_simulation(Inputs in, SimulationData SD, int 
         // Create Device Buffers
         ////////////////////////////////////////////////////////////////////////////////
 
-	double startP = get_time();
-#ifdef SYCL_USE_BUFFERS
-        // assign SYCL buffer to existing memory
-        sycl::buffer<int> num_nucs_d(SD.num_nucs,SD.length_num_nucs);
-        sycl::buffer<double> concs_d(SD.concs, SD.length_concs);
-        sycl::buffer<int> mats_d(SD.mats, SD.length_mats);
-        sycl::buffer<double> unionized_energy_array_d(SD.unionized_energy_array, SD.length_unionized_energy_array);
-        sycl::buffer<int> index_grid_d(SD.index_grid, SD.length_index_grid);
-        sycl::buffer<NuclideGridPoint> nuclide_grid_d(SD.nuclide_grid, SD.length_nuclide_grid);
-        sycl::buffer<int> verification_d(verification_host, in.lookups);
-#else
-	int* num_nucs                   = sycl::malloc_device<int>(SD.length_num_nucs, sycl_q);
-	double* concs                   = sycl::malloc_device<double>(SD.length_concs, sycl_q);
-	int* mats                       = sycl::malloc_device<int>(SD.length_mats, sycl_q);
-	double* unionized_energy_array  = sycl::malloc_device<double>(SD.length_unionized_energy_array, sycl_q);
-	int* index_grid                 = sycl::malloc_device<int>(SD.length_index_grid, sycl_q);
-	NuclideGridPoint* nuclide_grid  = sycl::malloc_device<NuclideGridPoint>(SD.length_nuclide_grid, sycl_q);
-	int* verification               = sycl::malloc_device<int>(in.lookups, sycl_q);
+	      double startP = get_time();
+	      int* num_nucs                   = sycl::malloc_device<int>(SD.length_num_nucs, sycl_q);
+	      double* concs                   = sycl::malloc_device<double>(SD.length_concs, sycl_q);
+	      int* mats                       = sycl::malloc_device<int>(SD.length_mats, sycl_q);
+	      double* unionized_energy_array  = sycl::malloc_device<double>(SD.length_unionized_energy_array, sycl_q);
+	      int* index_grid                 = sycl::malloc_device<int>(SD.length_index_grid, sycl_q);
+	      NuclideGridPoint* nuclide_grid  = sycl::malloc_device<NuclideGridPoint>(SD.length_nuclide_grid, sycl_q);
+	      int* verification               = sycl::malloc_device<int>(in.lookups, sycl_q);
 
-	sycl_q.memcpy(num_nucs, SD.num_nucs, SD.length_num_nucs * sizeof(int));
-	sycl_q.memcpy(concs, SD.concs, SD.length_concs * sizeof(double));
-	sycl_q.memcpy(mats, SD.mats, SD.length_mats * sizeof(int));
-	sycl_q.memcpy(unionized_energy_array, SD.unionized_energy_array, SD.length_unionized_energy_array * sizeof(double));
-	sycl_q.memcpy(index_grid, SD.index_grid, SD.length_index_grid * sizeof(int));
-	sycl_q.memcpy(nuclide_grid, SD.nuclide_grid, SD.length_nuclide_grid * sizeof(NuclideGridPoint));
-	sycl_q.wait();
-#endif
-	profile->host_to_device_time = get_time() - startP;
+	      sycl_q.memcpy(num_nucs, SD.num_nucs, SD.length_num_nucs * sizeof(int));
+	      sycl_q.memcpy(concs, SD.concs, SD.length_concs * sizeof(double));
+	      sycl_q.memcpy(mats, SD.mats, SD.length_mats * sizeof(int));
+	      sycl_q.memcpy(unionized_energy_array, SD.unionized_energy_array, SD.length_unionized_energy_array * sizeof(double));
+	      sycl_q.memcpy(index_grid, SD.index_grid, SD.length_index_grid * sizeof(int));
+	      sycl_q.memcpy(nuclide_grid, SD.nuclide_grid, SD.length_nuclide_grid * sizeof(NuclideGridPoint));
+	      sycl_q.wait();
+	      profile->host_to_device_time = get_time() - startP;
 
         if(mype==0) printf("Beginning event based simulation...\n");
 
-	int nwarmups = in.num_warmups;
-	startP = 0.0;
-	for (int it = 0; it < in.num_iterations + nwarmups; it++) {
-		if (it == nwarmups) {
-			sycl_q.wait();
-			startP = get_time();
-		}
+	      int nwarmups = in.num_warmups;
+	      startP = 0.0;
+	      for (int it = 0; it < in.num_iterations + nwarmups; it++) {
+		        if (it == nwarmups) {
+			          sycl_q.wait();
+			          startP = get_time();
+		        }
 
 		////////////////////////////////////////////////////////////////////////////////
 		// Define Device Kernel
@@ -96,19 +85,6 @@ unsigned long long run_event_based_simulation(Inputs in, SimulationData SD, int 
 
 		// queue a kernel to be run, as a lambda
 		sycl_q.submit([&](sycl::handler &cgh) {
-#ifdef SYCL_USE_BUFFERS
-			////////////////////////////////////////////////////////////////////////////////
-			// Create Device Accessors for Device Buffers
-			////////////////////////////////////////////////////////////////////////////////
-			sycl::accessor num_nucs {num_nucs_d, cgh, sycl::read_only};
-			sycl::accessor concs {concs_d, cgh, sycl::read_only};
-			sycl::accessor mats {mats_d, cgh, sycl::read_only};
-			sycl::accessor unionized_energy_array {unionized_energy_array_d, cgh, sycl::read_only};
-			sycl::accessor index_grid {index_grid_d, cgh, sycl::read_only};
-			sycl::accessor nuclide_grid {nuclide_grid_d, cgh, sycl::read_only};
-			sycl::accessor verification {verification_d, cgh, sycl::write_only, sycl::no_init};
-#endif
-
 			////////////////////////////////////////////////////////////////////////////////
 			// XS Lookup Simulation Loop
 			////////////////////////////////////////////////////////////////////////////////
@@ -177,11 +153,7 @@ unsigned long long run_event_based_simulation(Inputs in, SimulationData SD, int 
         if(mype==0) printf("Kernel initialization, compilation, and launch took %.2lf seconds.\n", stop-start);
 
 	startP = get_time();
-#ifdef SYCL_USE_BUFFERS
-        verification_d.get_host_access();
-#else
 	sycl_q.memcpy(verification_host, verification, in.lookups * sizeof(int)).wait();
-#endif
 	profile->device_to_host_time = get_time() - startP;
 
         // Host reduces the verification array
@@ -189,7 +161,6 @@ unsigned long long run_event_based_simulation(Inputs in, SimulationData SD, int 
         for( int i = 0; i < in.lookups; i++ )
                 verification_scalar += verification_host[i];
 
-#ifndef SYCL_USE_BUFFERS
 	sycl::free(num_nucs, sycl_q);
 	sycl::free(concs, sycl_q);
 	sycl::free(mats, sycl_q);
@@ -197,8 +168,7 @@ unsigned long long run_event_based_simulation(Inputs in, SimulationData SD, int 
 	sycl::free(index_grid, sycl_q);
 	sycl::free(nuclide_grid, sycl_q);
 	sycl::free(verification, sycl_q);
-#endif
-
+        
         return verification_scalar;
 }
 
