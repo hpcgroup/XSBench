@@ -55,11 +55,13 @@ unsigned long long run_event_based_simulation(Inputs in, SimulationData SD, int 
         int* num_nucs                   = sycl::malloc_device<int>(SD.length_num_nucs, sycl_q);
         double* concs                   = sycl::malloc_device<double>(SD.length_concs, sycl_q);
         int* mats                       = sycl::malloc_device<int>(SD.length_mats, sycl_q);
+	double* unionized_energy_array;
         if (SD.length_unionized_energy_array > 0) {
-                double* unionized_energy_array  = sycl::malloc_device<double>(SD.length_unionized_energy_array, sycl_q);
+                unionized_energy_array  = sycl::malloc_device<double>(SD.length_unionized_energy_array, sycl_q);
         }
+	int* index_grid;
         if (SD.length_index_grid > 0) {
-                int* index_grid                 = sycl::malloc_device<int>(SD.length_index_grid, sycl_q);
+                index_grid                 = sycl::malloc_device<int>(SD.length_index_grid, sycl_q);
         }
         NuclideGridPoint* nuclide_grid  = sycl::malloc_device<NuclideGridPoint>(SD.length_nuclide_grid, sycl_q);
         int* verification               = sycl::malloc_device<int>(in.lookups, sycl_q);
