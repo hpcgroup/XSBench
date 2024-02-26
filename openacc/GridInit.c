@@ -64,8 +64,16 @@ SimulationData grid_init_do_not_profile( Inputs in, int mype )
 
 	if( in.grid_type == NUCLIDE )
 	{
-		SD.length_unionized_energy_array = 0;
-		SD.length_index_grid = 0;
+		// Josh: workaround to avoid OpenACC empty copy/not present errors
+		// SD.length_unionized_energy_array = 0;
+		// SD.length_index_grid = 0;
+		SD.length_unionized_energy_array = 1;
+		SD.length_index_grid = 1;
+		SD.unionized_energy_array = (double *) malloc( sizeof(double));
+		SD.index_grid = (int *) malloc( sizeof(int));
+		SD.unionized_energy_array[0] = 0.0;
+		SD.index_grid[0] = 0;
+		// end workaround
 	}
 
 	if( in.grid_type == UNIONIZED )
@@ -125,7 +133,12 @@ SimulationData grid_init_do_not_profile( Inputs in, int mype )
 	if( in.grid_type == HASH )
 	{
 		if(mype == 0) printf("Intializing hash grid...\n");
-		SD.length_unionized_energy_array = 0;
+		// Josh: workaround to avoid OpenACC empty copy/not present errors
+		// SD.length_unionized_energy_array = 0;
+		SD.length_unionized_energy_array = 1;
+		SD.unionized_energy_array = (double *) malloc( sizeof(double));
+		SD.unionized_energy_array[0] = 0.0;
+		// end workaround
 		SD.length_index_grid  = in.hash_bins * in.n_isotopes;
 		SD.index_grid = (int *) malloc( SD.length_index_grid * sizeof(int));
 		assert(SD.index_grid != NULL);

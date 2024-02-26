@@ -48,19 +48,19 @@ SimulationData move_simulation_data_to_device( Inputs in, int mype, SimulationDa
 	rm.copy(GSD.mats, SD.mats);
 	total_sz += sz;
 
-  if (SD.length_unionized_energy_array != 0) {
-    sz = GSD.length_unionized_energy_array * sizeof(double);
-    GSD.unionized_energy_array = static_cast<double*>(allocator.allocate(sz));
-    rm.copy(GSD.unionized_energy_array, SD.unionized_energy_array);
-    total_sz += sz;
-  }
+	if (SD.length_unionized_energy_array != 0) {
+		sz = GSD.length_unionized_energy_array * sizeof(double);
+		GSD.unionized_energy_array = static_cast<double*>(allocator.allocate(sz));
+		rm.copy(GSD.unionized_energy_array, SD.unionized_energy_array);
+		total_sz += sz;
+	}
 
-  if (SD.length_index_grid != 0) {
-    sz = GSD.length_index_grid * sizeof(int);
-    GSD.index_grid = static_cast<int*>(allocator.allocate(sz));
-    rm.copy(GSD.index_grid, SD.index_grid);
-	  total_sz += sz;
-  }
+	if (SD.length_index_grid != 0) {
+		sz = GSD.length_index_grid * sizeof(int);
+		GSD.index_grid = static_cast<int*>(allocator.allocate(sz));
+		rm.copy(GSD.index_grid, SD.index_grid);
+		total_sz += sz;
+	}
 
 	sz = GSD.length_nuclide_grid * sizeof(NuclideGridPoint);
 	GSD.nuclide_grid = static_cast<NuclideGridPoint*>(allocator.allocate(sz));
@@ -89,7 +89,7 @@ void release_device_memory(SimulationData GSD) {
 	allocator.deallocate(GSD.concs);
 	allocator.deallocate(GSD.mats);
 	if (GSD.length_unionized_energy_array != 0) allocator.deallocate(GSD.unionized_energy_array);
-  if (GSD.length_index_grid != 0) allocator.deallocate(GSD.index_grid);
+	if (GSD.length_index_grid != 0) allocator.deallocate(GSD.index_grid);
 	allocator.deallocate(GSD.nuclide_grid);
 	allocator.deallocate(GSD.verification);
 }
@@ -102,7 +102,7 @@ void release_memory(SimulationData SD) {
 	allocator.deallocate(SD.concs);
 	allocator.deallocate(SD.mats);
 	if (SD.length_unionized_energy_array != 0) allocator.deallocate(SD.unionized_energy_array);
-  if (SD.length_index_grid != 0) allocator.deallocate(SD.index_grid);
+	if (SD.length_index_grid != 0) allocator.deallocate(SD.index_grid);
 	allocator.deallocate(SD.nuclide_grid);
 	allocator.deallocate(SD.verification);
 }

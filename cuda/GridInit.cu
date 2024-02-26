@@ -45,15 +45,19 @@ SimulationData move_simulation_data_to_device( Inputs in, int mype, SimulationDa
         gpuErrchk( cudaMemcpy(GSD.mats, SD.mats, sz, cudaMemcpyHostToDevice) );
         total_sz += sz;
 
-        sz = GSD.length_unionized_energy_array * sizeof(double);
-        gpuErrchk( cudaMalloc((void **) &GSD.unionized_energy_array, sz) );
-        gpuErrchk( cudaMemcpy(GSD.unionized_energy_array, SD.unionized_energy_array, sz, cudaMemcpyHostToDevice) );
-        total_sz += sz;
+        if (SD.length_unionized_energy_array != 0) {
+                sz = GSD.length_unionized_energy_array * sizeof(double);
+                gpuErrchk( cudaMalloc((void **) &GSD.unionized_energy_array, sz) );
+                gpuErrchk( cudaMemcpy(GSD.unionized_energy_array, SD.unionized_energy_array, sz, cudaMemcpyHostToDevice) );
+                total_sz += sz;
+        }
 
-        sz = GSD.length_index_grid * sizeof(int);
-        gpuErrchk( cudaMalloc((void **) &GSD.index_grid, sz) );
-        gpuErrchk( cudaMemcpy(GSD.index_grid, SD.index_grid, sz, cudaMemcpyHostToDevice) );
-        total_sz += sz;
+        if (SD.length_index_grid != 0) {
+                sz = GSD.length_index_grid * sizeof(int);
+                gpuErrchk( cudaMalloc((void **) &GSD.index_grid, sz) );
+                gpuErrchk( cudaMemcpy(GSD.index_grid, SD.index_grid, sz, cudaMemcpyHostToDevice) );
+                total_sz += sz;
+        }
 
         sz = GSD.length_nuclide_grid * sizeof(NuclideGridPoint);
         gpuErrchk( cudaMalloc((void **) &GSD.nuclide_grid, sz) );
@@ -82,7 +86,7 @@ void release_device_memory(SimulationData GSD) {
         cudaFree(GSD.num_nucs);
         cudaFree(GSD.concs);
         cudaFree(GSD.mats);
-        cudaFree(GSD.unionized_energy_array);
+        if (GSD.length_unionized_energy_array > 0) cudaFree(GSD.unionized_energy_array);
         cudaFree(GSD.nuclide_grid);
         cudaFree(GSD.verification);
 }
@@ -91,7 +95,7 @@ void release_memory(SimulationData SD) {
         free(SD.num_nucs);
         free(SD.concs);
         free(SD.mats);
-        free(SD.unionized_energy_array);
+        if (SD.length_unionized_energy_array > 0) free(SD.unionized_energy_array);
         free(SD.nuclide_grid);
         free(SD.verification);
 }

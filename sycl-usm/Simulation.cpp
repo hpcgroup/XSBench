@@ -55,16 +55,24 @@ unsigned long long run_event_based_simulation(Inputs in, SimulationData SD, int 
         int* num_nucs                   = sycl::malloc_device<int>(SD.length_num_nucs, sycl_q);
         double* concs                   = sycl::malloc_device<double>(SD.length_concs, sycl_q);
         int* mats                       = sycl::malloc_device<int>(SD.length_mats, sycl_q);
-        double* unionized_energy_array  = sycl::malloc_device<double>(SD.length_unionized_energy_array, sycl_q);
-        int* index_grid                 = sycl::malloc_device<int>(SD.length_index_grid, sycl_q);
+        if (SD.length_unionized_energy_array > 0) {
+                double* unionized_energy_array  = sycl::malloc_device<double>(SD.length_unionized_energy_array, sycl_q);
+        }
+        if (SD.length_index_grid > 0) {
+                int* index_grid                 = sycl::malloc_device<int>(SD.length_index_grid, sycl_q);
+        }
         NuclideGridPoint* nuclide_grid  = sycl::malloc_device<NuclideGridPoint>(SD.length_nuclide_grid, sycl_q);
         int* verification               = sycl::malloc_device<int>(in.lookups, sycl_q);
 
         sycl_q.memcpy(num_nucs, SD.num_nucs, SD.length_num_nucs * sizeof(int));
         sycl_q.memcpy(concs, SD.concs, SD.length_concs * sizeof(double));
         sycl_q.memcpy(mats, SD.mats, SD.length_mats * sizeof(int));
-        sycl_q.memcpy(unionized_energy_array, SD.unionized_energy_array, SD.length_unionized_energy_array * sizeof(double));
-        sycl_q.memcpy(index_grid, SD.index_grid, SD.length_index_grid * sizeof(int));
+        if (SD.length_unionized_energy_array > 0) {
+                sycl_q.memcpy(unionized_energy_array, SD.unionized_energy_array, SD.length_unionized_energy_array * sizeof(double));
+        }
+        if (SD.length_index_grid > 0) {
+                sycl_q.memcpy(index_grid, SD.index_grid, SD.length_index_grid * sizeof(int));
+        }
         sycl_q.memcpy(nuclide_grid, SD.nuclide_grid, SD.length_nuclide_grid * sizeof(NuclideGridPoint));
         sycl_q.wait();
         profile->host_to_device_time = get_time() - startP;
@@ -164,8 +172,8 @@ unsigned long long run_event_based_simulation(Inputs in, SimulationData SD, int 
         sycl::free(num_nucs, sycl_q);
         sycl::free(concs, sycl_q);
         sycl::free(mats, sycl_q);
-        sycl::free(unionized_energy_array, sycl_q);
-        sycl::free(index_grid, sycl_q);
+        if (SD.length_unionized_energy_array > 0) sycl::free(unionized_energy_array, sycl_q);
+        if (SD.length_index_grid > 0) sycl::free(index_grid, sycl_q);
         sycl::free(nuclide_grid, sycl_q);
         sycl::free(verification, sycl_q);
 
@@ -237,7 +245,7 @@ void calculate_micro_xs(   double p_energy, int nuc, long n_isotopes,
                 }
         }
         else // Hash grid
-{
+        {
                 // load lower bounding index
                 int u_low = index_data[idx * n_isotopes + nuc];
 

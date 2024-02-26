@@ -58,14 +58,18 @@ unsigned long long run_event_based_simulation(Inputs in, SimulationData SD, int 
         SD.d_mats = new IntView(Kokkos::ViewAllocateWithoutInitializing("d_mats"), SD.length_mats);
         Kokkos::deep_copy(*SD.d_mats, u_mats);
 
-        UDoubleView u_unionized_energy_array(SD.unionized_energy_array, SD.length_unionized_energy_array);
-        SD.d_unionized_energy_array = new DoubleView(Kokkos::ViewAllocateWithoutInitializing("d_unionized_energy_array"),
-						     SD.length_unionized_energy_array);
-        Kokkos::deep_copy(*SD.d_unionized_energy_array, u_unionized_energy_array);
+        if (SD.length_unionized_energy_array > 0) {
+                UDoubleView u_unionized_energy_array(SD.unionized_energy_array, SD.length_unionized_energy_array);
+                SD.d_unionized_energy_array = new DoubleView(Kokkos::ViewAllocateWithoutInitializing("d_unionized_energy_array"),
+                                                             SD.length_unionized_energy_array);
+                Kokkos::deep_copy(*SD.d_unionized_energy_array, u_unionized_energy_array);
+        }
 
-        UIntView u_index_grid(SD.index_grid, SD.length_index_grid);
-        SD.d_index_grid = new IntView(Kokkos::ViewAllocateWithoutInitializing("d_index_grid"), SD.length_index_grid);
-        Kokkos::deep_copy(*SD.d_index_grid, u_index_grid);
+        if (SD.length_index_grid > 0) {
+                UIntView u_index_grid(SD.index_grid, SD.length_index_grid);
+                SD.d_index_grid = new IntView(Kokkos::ViewAllocateWithoutInitializing("d_index_grid"), SD.length_index_grid);
+                Kokkos::deep_copy(*SD.d_index_grid, u_index_grid);
+        }
 
         UPointView u_nuclide_grid(SD.nuclide_grid, SD.length_nuclide_grid);
         SD.d_nuclide_grid = new PointView(Kokkos::ViewAllocateWithoutInitializing("d_nuclide_grid"), SD.length_nuclide_grid);

@@ -43,37 +43,37 @@ unsigned long long run_event_based_simulation(Inputs in, SimulationData SD, int 
 
 	double start = get_time();
 
-  int *num_nucs = SD.num_nucs;
-  double *concs = SD.concs;
-  int *mats = SD.mats;
-  double *unionized_energy_array = SD.unionized_energy_array;
-  int *index_grid = SD.index_grid;
-  NuclideGridPoint *nuclide_grid = SD.nuclide_grid;
+	int *num_nucs = SD.num_nucs;
+	double *concs = SD.concs;
+	int *mats = SD.mats;
+	double *unionized_energy_array = SD.unionized_energy_array;
+	int *index_grid = SD.index_grid;
+	NuclideGridPoint *nuclide_grid = SD.nuclide_grid;
 
-  #pragma acc enter data \
-    copyin(num_nucs[:SD.length_num_nucs], concs[:SD.length_concs], \
-           mats[:SD.length_mats], nuclide_grid[:SD.length_nuclide_grid]) \
-    create(verification[:in.lookups])
+	#pragma acc enter data \
+		copyin(num_nucs[:SD.length_num_nucs], concs[:SD.length_concs], \
+		       mats[:SD.length_mats], nuclide_grid[:SD.length_nuclide_grid]) \
+		create(verification[:in.lookups])
 
-  if (SD.length_unionized_energy_array != 0) {
-    #pragma acc enter data \
-      copyin(unionized_energy_array[:SD.length_unionized_energy_array])
-  }
-  
-  if (SD.length_index_grid != 0) {
-    #pragma acc enter data \
-      copyin(index_grid[:SD.length_index_grid])
-  }
+	if (SD.length_unionized_energy_array != 0) {
+		#pragma acc enter data \
+			copyin(unionized_energy_array[:SD.length_unionized_energy_array])
+	}
+
+	if (SD.length_index_grid != 0) {
+		#pragma acc enter data \
+			copyin(index_grid[:SD.length_index_grid])
+	}
 
 	profile->host_to_device_time = get_time() - start;
 
-  int nwarmups = in.num_warmups;
+	int nwarmups = in.num_warmups;
 	for (int it = 0; it < in.num_iterations + nwarmups; it++) {
 		if (it == nwarmups) start = get_time();
 		#pragma acc parallel loop \
-      present(num_nucs[:SD.length_num_nucs], concs[:SD.length_concs], \
-           mats[:SD.length_mats], unionized_energy_array[:SD.length_unionized_energy_array], \
-           index_grid[:SD.length_index_grid], nuclide_grid[:SD.length_nuclide_grid], verification[:in.lookups]) 
+			present(num_nucs[:SD.length_num_nucs], concs[:SD.length_concs], \
+				mats[:SD.length_mats], unionized_energy_array[:SD.length_unionized_energy_array], \
+				index_grid[:SD.length_index_grid], nuclide_grid[:SD.length_nuclide_grid], verification[:in.lookups]) 
 		for( int i = 0; i < in.lookups; i++ )
 		{
 			// Set the initial seed value
@@ -135,7 +135,7 @@ unsigned long long run_event_based_simulation(Inputs in, SimulationData SD, int 
 	start = get_time();
 
 	#pragma acc exit data \
-	  copyout(verification[0:in.lookups])
+		copyout(verification[0:in.lookups])
 
 	profile->device_to_host_time = get_time() - start;
 

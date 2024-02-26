@@ -45,15 +45,19 @@ SimulationData move_simulation_data_to_device( Inputs in, int mype, SimulationDa
 	gpuErrchk( hipMemcpy(GSD.mats, SD.mats, sz, hipMemcpyHostToDevice) );
 	total_sz += sz;
 
-	sz = GSD.length_unionized_energy_array * sizeof(double);
-	gpuErrchk( hipMalloc((void **) &GSD.unionized_energy_array, sz) );
-	gpuErrchk( hipMemcpy(GSD.unionized_energy_array, SD.unionized_energy_array, sz, hipMemcpyHostToDevice) );
-	total_sz += sz;
+	if (SD.length_unionized_energy_array > 0) {
+		sz = GSD.length_unionized_energy_array * sizeof(double);
+		gpuErrchk( hipMalloc((void **) &GSD.unionized_energy_array, sz) );
+		gpuErrchk( hipMemcpy(GSD.unionized_energy_array, SD.unionized_energy_array, sz, hipMemcpyHostToDevice) );
+		total_sz += sz;
+	}
 
-	sz = GSD.length_index_grid * sizeof(int);
-	gpuErrchk( hipMalloc((void **) &GSD.index_grid, sz) );
-	gpuErrchk( hipMemcpy(GSD.index_grid, SD.index_grid, sz, hipMemcpyHostToDevice) );
-	total_sz += sz;
+	if (SD.length_index_grid > 0) {
+		sz = GSD.length_index_grid * sizeof(int);
+		gpuErrchk( hipMalloc((void **) &GSD.index_grid, sz) );
+		gpuErrchk( hipMemcpy(GSD.index_grid, SD.index_grid, sz, hipMemcpyHostToDevice) );
+		total_sz += sz;
+	}
 
 	sz = GSD.length_nuclide_grid * sizeof(NuclideGridPoint);
 	gpuErrchk( hipMalloc((void **) &GSD.nuclide_grid, sz) );
@@ -82,7 +86,7 @@ void release_device_memory(SimulationData GSD) {
 	hipFree(GSD.num_nucs);
 	hipFree(GSD.concs);
 	hipFree(GSD.mats);
-	hipFree(GSD.unionized_energy_array);
+	if (GSD.length_unionized_energy_array > 0) hipFree(GSD.unionized_energy_array);
 	hipFree(GSD.nuclide_grid);
 	hipFree(GSD.verification);
 }
@@ -91,7 +95,7 @@ void release_memory(SimulationData SD) {
 	free(SD.num_nucs);
 	free(SD.concs);
 	free(SD.mats);
-	free(SD.unionized_energy_array);
+	if (SD.length_unionized_energy_array > 0) free(SD.unionized_energy_array);
 	free(SD.nuclide_grid);
 	free(SD.verification);
 }
