@@ -42,9 +42,6 @@ unsigned long long run_event_based_simulation(Inputs in, SimulationData SD, int 
 
 	double startP = get_time();
 
-	UIntView u_max_num_nucs(&SD.max_num_nucs, 1);
-        SD.d_max_num_nucs = new IntView(Kokkos::ViewAllocateWithoutInitializing("d_max_num_nucs"), length_max_num_nucs);
-        Kokkos::deep_copy(*SD.d_max_num_nucs, u_max_num_nucs);
 
         UIntView u_num_nucs(SD.num_nucs, SD.length_num_nucs);
         SD.d_num_nucs = new IntView(Kokkos::ViewAllocateWithoutInitializing("d_num_nucs"), SD.length_num_nucs);
@@ -78,10 +75,13 @@ unsigned long long run_event_based_simulation(Inputs in, SimulationData SD, int 
 	IntView num_nucs(*SD.d_num_nucs);
 	DoubleView concs(*SD.d_concs);
 	IntView mats(*SD.d_mats);
-	DoubleView unionized_energy_array(*SD.d_unionized_energy_array);
-	IntView index_grid(*SD.d_index_grid);
+	DoubleView unionized_energy_array;
+  IntView index_grid;
+  if (SD.length_unionized_energy_array > 0)
+	  unionized_energy_array= *SD.d_unionized_energy_array;
+  if (SD.length_index_grid > 0)
+	  index_grid= *SD.d_index_grid;
 	PointView nuclide_grid(*SD.d_nuclide_grid);
-	IntView max_num_nucs(*SD.d_max_num_nucs);
 
 	////////////////////////////////////////////////////////////////////////////////
 	// Begin Actual Simulation Loop
@@ -133,7 +133,7 @@ unsigned long long run_event_based_simulation(Inputs in, SimulationData SD, int 
 					macro_xs_vector, // 1-D array with result of the macroscopic cross section (5 different reaction channels)
 					in.grid_type,    // Lookup type (nuclide, hash, or unionized)
 					in.hash_bins,    // Number of hash bins used (if using hash lookup type)
-					max_num_nucs(0)  // Maximum number of nuclides present in any material
+					SD.max_num_nucs  // Maximum number of nuclides present in any material
 			 		);
 
 			// For verification, and to prevent the compiler from optimizing
