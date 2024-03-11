@@ -21,13 +21,13 @@ find_package(Kokkos REQUIRED)
 
 if (${KOKKOS_BACK_END} STREQUAL "CUDA")
     enable_language(CUDA)
-    set(CMAKE_CUDA_STANDARD 14)
+    set(CMAKE_CUDA_STANDARD 17)
     set(CMAKE_CUDA_SEPARABLE_COMPILATION ON)
 
     set_source_files_properties(${SOURCE} PROPERTIES LANGUAGE CUDA)
 elseif (${KOKKOS_BACK_END} STREQUAL "HIP")
     enable_language(HIP)
-    set(CMAKE_HIP_STANDARD 14)
+    set(CMAKE_HIP_STANDARD 17)
     set(CMAKE_HIP_SEPARABLE_COMPILATION ON)
 
     set_source_files_properties(${SOURCE} PROPERTIES LANGUAGE HIP)
