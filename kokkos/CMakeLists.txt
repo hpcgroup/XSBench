@@ -23,6 +23,8 @@ if (${KOKKOS_BACK_END} STREQUAL "CUDA")
     enable_language(CUDA)
     set(CMAKE_CUDA_STANDARD 17)
 
+    set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} -extended-lambda -Wext-lambda-captures-this -expt-relaxed-constexpr")
+
     set_source_files_properties(${SOURCE} PROPERTIES LANGUAGE CUDA)
 elseif (${KOKKOS_BACK_END} STREQUAL "HIP")
     enable_language(HIP)
