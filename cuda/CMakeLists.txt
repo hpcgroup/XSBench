@@ -6,8 +6,6 @@ project(
     LANGUAGES CXX CUDA
 )
 
-set(CMAKE_CUDA_SEPERABLE_COMPILATION ON)
-
 if(NOT CMAKE_BUILD_TYPE)
   set(CMAKE_BUILD_TYPE Release)
 endif()

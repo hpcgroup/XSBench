@@ -6,8 +6,6 @@ project(
     LANGUAGES CXX HIP
 )
 
-set(CMAKE_HIP_SEPERABLE_COMPILATION ON)
-
 if(NOT CMAKE_BUILD_TYPE)
   set(CMAKE_BUILD_TYPE Release)
 endif()

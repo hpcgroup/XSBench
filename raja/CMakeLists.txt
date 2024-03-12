@@ -28,16 +28,15 @@ target_link_libraries(XSBench RAJA umpire)
 if (${RAJA_BACK_END} STREQUAL "CUDA")
     enable_language(CUDA)
     set(CMAKE_CUDA_STANDARD 14)
-    set(CMAKE_CUDA_SEPARABLE_COMPILATION ON)
 
     set_source_files_properties(${SOURCE} PROPERTIES LANGUAGE CUDA)
     set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} -extended-lambda --expt-relaxed-constexpr --restrict --keep")
     set_target_properties(XSBench PROPERTIES CUDA_RESOLVE_DEVICE_SYMBOLS ON)
 elseif (${RAJA_BACK_END} STREQUAL "HIP")
-    find_package(hip REQUIRED)
     enable_language(HIP)
     set(CMAKE_HIP_STANDARD 14)
-    set(CMAKE_HIP_SEPARABLE_COMPILATION ON)
+
+    find_package(hip REQUIRED)
 
     set_source_files_properties(${SOURCE} PROPERTIES LANGUAGE HIP)
 endif ()
