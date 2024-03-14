@@ -84,13 +84,13 @@ SimulationData binary_read( Inputs in );
 // Simulation.c
 unsigned long long run_event_based_simulation(Inputs in, SimulationData SD, int mype, Profile* profile);
 unsigned long long run_history_based_simulation(Inputs in, SimulationData SD, int mype);
-#pragma acc routine
+#pragma acc routine seq
 void calculate_micro_xs(   double p_energy, int nuc, long n_isotopes,
                            long n_gridpoints,
                            double *  egrid, int *  index_data,
                            NuclideGridPoint *  nuclide_grids,
                            long idx, double *  xs_vector, int grid_type, int hash_bins );
-#pragma acc routine
+#pragma acc routine seq
 void calculate_macro_xs( double p_energy, int mat, long n_isotopes,
                          long n_gridpoints, int *  num_nucs,
                          double *  concs,
@@ -100,7 +100,7 @@ void calculate_macro_xs( double p_energy, int mat, long n_isotopes,
                          double *  macro_xs_vector, int grid_type, int hash_bins, int max_num_nucs );
 long grid_search( long n, double quarry, double *  A);
 long grid_search_nuclide( long n, double quarry, NuclideGridPoint * A, long low, long high);
-#pragma acc routine
+#pragma acc routine seq
 int pick_mat( uint64_t * seed );
 double LCG_random_double(uint64_t * seed);
 uint64_t fast_forward_LCG(uint64_t seed, uint64_t n);
