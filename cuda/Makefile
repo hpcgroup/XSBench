@@ -7,6 +7,7 @@ OPTIMIZE    ?= yes
 DEBUG       ?= no
 PROFILE     ?= no
 SM_VERSION  ?= 80
+REG_COUNT   ?=
 
 #===============================================================================
 # Program name & source code list
@@ -37,7 +38,7 @@ LDFLAGS = -lm
 # NVIDIA Compiler
 ifeq ($(COMPILER),nvidia)
   CC = nvcc
-  CFLAGS += -Xcompiler -Wall -Xcompiler -O3 -arch=sm_$(SM_VERSION) -std=c++14
+  CFLAGS += -Xcompiler -Wall -Xcompiler -O3 -lineinfo -arch=sm_$(SM_VERSION) -std=c++14
 endif
 
 # Debug Flags
@@ -55,6 +56,11 @@ endif
 # Optimization Flags
 ifeq ($(OPTIMIZE),yes)
   CFLAGS += -O3
+endif
+
+# Register Count Flag
+ifneq ($(REG_COUNT),)
+  CFLAGS += -maxrregcount=$(REG_COUNT)
 endif
 
 #===============================================================================

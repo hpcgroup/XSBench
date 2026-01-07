@@ -218,11 +218,11 @@ void print_CLI_error(void)
 	printf("  -l <lookups>             History Based: Number of Cross-section (XS) lookups per particle. Event Based: Total number of XS lookups.\n");
 	printf("  -h <hash bins>           Number of hash bins (only relevant when used with \"-G hash\")\n");
 	printf("  -b <binary mode>         Read or write all data structures to file. If reading, this will skip initialization phase. (read, write)\n");
-	printf("  -k <kernel ID>           Specifies which kernel to run. 0 is baseline, 1, 2, etc are optimized variants. (0 is default.)\n");
+	printf("  -t <thread block size>   Thread block size. (128 is default.)\n");
 	printf("  -n <num iterations>      Specifies how many kernel iterations to run. (1 is default.)\n");
 	printf("  -w <num warmups>         Specifies how many warmup iterations to run. (0 is default.)\n");
 	printf("  --csv <file path>        Save output to csv file. (Default is stdout)\n");
-	printf("Default is equivalent to: -m history -s large -l 34 -p 500000 -G unionized -k 0 -n 1\n");
+	printf("Default is equivalent to: -m history -s large -l 34 -p 500000 -G unionized -t 128 -n 1\n");
 	printf("See readme for full description of default run values\n");
 	exit(4);
 }
@@ -259,7 +259,7 @@ Inputs read_CLI( int argc, char * argv[] )
 	input.binary_mode = NONE;
 
 	// defaults to baseline kernel
-	input.kernel_id = 0;
+	input.thread_block_size = 128;
 
 	// default to one kernel iteration
 	input.num_iterations = 1;
@@ -397,12 +397,12 @@ Inputs read_CLI( int argc, char * argv[] )
 			else
 				print_CLI_error();
 		}
-		// kernel optimization selection (-k)
-		else if( strcmp(arg, "-k") == 0 )
+		// thread block size (-t)
+		else if( strcmp(arg, "-t") == 0 )
 		{
 			if( ++i < argc )
 			{
-				input.kernel_id = atoi(argv[i]);
+				input.thread_block_size = atoi(argv[i]);
 			}
 			else
 				print_CLI_error();

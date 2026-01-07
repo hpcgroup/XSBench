@@ -3,6 +3,9 @@
 
 // Header for shared utilities across XSBench versions
 
+#include <bits/types/FILE.h>
+#include <stdio.h>
+
 typedef struct{
         int nthreads;
         long n_isotopes;
@@ -14,7 +17,7 @@ typedef struct{
         int particles;
         int simulation_method;
         int binary_mode;
-        int kernel_id;
+        int thread_block_size;
         int num_iterations;
         int num_warmups;
         char *filename;
