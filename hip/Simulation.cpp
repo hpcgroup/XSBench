@@ -25,6 +25,7 @@ unsigned long long run_event_based_simulation_baseline(Inputs in, SimulationData
 
 	int nwarmups = in.num_warmups;
 	double start = 0.0;
+	//kernel code
 	for (int i = 0; i < in.num_iterations + nwarmups; i++) {
 		if (i == nwarmups) {
 			gpuErrchk( hipDeviceSynchronize() );
@@ -36,10 +37,15 @@ unsigned long long run_event_based_simulation_baseline(Inputs in, SimulationData
 	gpuErrchk( hipDeviceSynchronize() );
 	profile->kernel_time = get_time() - start;
 
+	//host memory for data retrieving
 	size_t sz = in.lookups * sizeof(unsigned long);
 	unsigned long * v = (unsigned long *) malloc(sz);
 
 	start = get_time();
+
+	printf("[DEBUG] Transfer: verification (RESULTS) | Elements: %ld | Type: unsigned long | Size: %zu bytes (D-to-H)\n", 
+            (long)in.lookups, sz);
+
 	gpuErrchk( hipMemcpy(v, GSD.verification, sz, hipMemcpyDeviceToHost) );
 	profile->device_to_host_time = get_time() - start;
 

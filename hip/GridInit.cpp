@@ -30,36 +30,48 @@ SimulationData move_simulation_data_to_device( Inputs in, int mype, SimulationDa
 	SimulationData GSD = SD;
 
 	// Move data to GPU memory space
+	//int data transfer
 	sz = GSD.length_num_nucs * sizeof(int);
+	printf("[DEBUG] Transfer : num_nucs | Elements: %ld | Type: int |Size: %zu bytes (H-to-D)\n", (long)GSD.length_num_nucs,sz);
 	gpuErrchk( hipMalloc((void **) &GSD.num_nucs, sz) );
 	gpuErrchk( hipMemcpy(GSD.num_nucs, SD.num_nucs, sz, hipMemcpyHostToDevice) );
 	total_sz += sz;
 
+	//double data
 	sz = GSD.length_concs * sizeof(double);
+	printf("[DEBUG] Transfer: concs | Elements: %ld | Type: double | Size: %zu bytes (H-to-D)\n", (long)GSD.length_concs, sz);
 	gpuErrchk( hipMalloc((void **) &GSD.concs, sz) );
 	gpuErrchk( hipMemcpy(GSD.concs, SD.concs, sz, hipMemcpyHostToDevice) );
 	total_sz += sz;
 
+	//mats(int)
 	sz = GSD.length_mats * sizeof(int);
+	printf("[DEBUG] Transfer: mats | Elements: %ld | Type: int | Size: %zu bytes (H-to-D)\n", (long)GSD.length_mats, sz);
 	gpuErrchk( hipMalloc((void **) &GSD.mats, sz) );
 	gpuErrchk( hipMemcpy(GSD.mats, SD.mats, sz, hipMemcpyHostToDevice) );
 	total_sz += sz;
 
+	//unionized energy array
 	if (SD.length_unionized_energy_array > 0) {
 		sz = GSD.length_unionized_energy_array * sizeof(double);
+		printf("[DEBUG] Transfer: unionized_energy | Elements: %ld | Type: double | Size: %zu bytes (H-to-D)\n", (long)GSD.length_unionized_energy_array, sz);
 		gpuErrchk( hipMalloc((void **) &GSD.unionized_energy_array, sz) );
 		gpuErrchk( hipMemcpy(GSD.unionized_energy_array, SD.unionized_energy_array, sz, hipMemcpyHostToDevice) );
 		total_sz += sz;
 	}
 
+	//index grid
 	if (SD.length_index_grid > 0) {
 		sz = GSD.length_index_grid * sizeof(int);
+		printf("[DEBUG] Transfer: index_grid | Elements: %ld | Type: int | Size: %zu bytes (H-to-D)\n", (long)GSD.length_index_grid, sz);
 		gpuErrchk( hipMalloc((void **) &GSD.index_grid, sz) );
 		gpuErrchk( hipMemcpy(GSD.index_grid, SD.index_grid, sz, hipMemcpyHostToDevice) );
 		total_sz += sz;
 	}
 
+	//nuclide grid
 	sz = GSD.length_nuclide_grid * sizeof(NuclideGridPoint);
+	printf("[DEBUG] Transfer: nuclide_grid | Elements: %ld | Type: NuclideGridPoint (Struct) | Size: %zu bytes (H-to-D)\n", (long)GSD.length_nuclide_grid, sz);
 	gpuErrchk( hipMalloc((void **) &GSD.nuclide_grid, sz) );
 	gpuErrchk( hipMemcpy(GSD.nuclide_grid, SD.nuclide_grid, sz, hipMemcpyHostToDevice) );
 	total_sz += sz;
@@ -67,6 +79,7 @@ SimulationData move_simulation_data_to_device( Inputs in, int mype, SimulationDa
 	// Allocate verification array on device. This structure is not needed on CPU, so we don't
 	// have to copy anything over.
 	sz = in.lookups * sizeof(unsigned long);
+	printf("[DEBUG] Allocate (No Transfer): verification | Elements: %ld | Type: unsigned long | Size: %zu bytes (H-to-D)\n", (long)in.lookups, sz);
 	gpuErrchk( hipMalloc((void **) &GSD.verification, sz) );
 	total_sz += sz;
 	GSD.length_verification = in.lookups;
@@ -75,7 +88,7 @@ SimulationData move_simulation_data_to_device( Inputs in, int mype, SimulationDa
 	gpuErrchk( hipPeekAtLastError() );
 	gpuErrchk( hipDeviceSynchronize() );
 
-	if(mype == 0 ) printf("GPU Intialization complete. Allocated %.0lf MB of data on GPU.\n", total_sz/1024.0/1024.0 );
+	if(mype == 0 ) printf("GPU Intialization complete. Allocated %.0lf MB of data on GPU. \n", total_sz/1024.0/1024.0 );
 
 	return GSD;
 

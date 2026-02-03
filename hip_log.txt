@@ -1,0 +1,63 @@
+shim7815@faraday:~/excl/XSBench/hip[master !?]$ ./XSBench -m event -G hash -n 150 -w 15
+================================================================================
+                   __   __ ___________                 _                        
+                   \ \ / //  ___| ___ \               | |                       
+                    \ V / \ `--.| |_/ / ___ _ __   ___| |__                     
+                    /   \  `--. \ ___ \/ _ \ '_ \ / __| '_ \                    
+                   / /^\ \/\__/ / |_/ /  __/ | | | (__| | | |                   
+                   \/   \/\____/\____/ \___|_| |_|\___|_| |_|                   
+
+================================================================================
+                    Developed at Argonne National Laboratory
+                                   Version: 20
+================================================================================
+                                  INPUT SUMMARY
+================================================================================
+Programming Model:            HIP
+HIP Device:                   AMD Instinct MI300A
+Simulation Method:            Event Based
+Grid Type:                    Hash
+Materials:                    12
+H-M Benchmark Size:           large
+Total Nuclides:               355
+Gridpoints (per Nuclide):     11,303
+Hash Bins:                    10,000
+Total XS Lookups:             17,000,000
+Total XS Iterations:          150
+Est. Memory Usage (MB):       198
+Binary File Mode:             Off
+================================================================================
+                         INITIALIZATION - DO NOT PROFILE
+================================================================================
+Intializing nuclide grids...
+Intializing hash grid...
+Intializing material data...
+Intialization complete. Allocated 327 MB of data on CPU.
+Allocating and moving simulation data to GPU memory space...
+[DEBUG] Transfer : num_nucs | Elements: 12 | Type: int |Size: 48 bytes (H-to-D)
+[DEBUG] Transfer: concs | Elements: 3852 | Type: double | Size: 30816 bytes (H-to-D)
+[DEBUG] Transfer: mats | Elements: 3852 | Type: int | Size: 15408 bytes (H-to-D)
+[DEBUG] Transfer: index_grid | Elements: 3550000 | Type: int | Size: 14200000 bytes (H-to-D)
+[DEBUG] Transfer: nuclide_grid | Elements: 4012565 | Type: NuclideGridPoint (Struct) | Size: 192603120 bytes (H-to-D)
+[DEBUG] Allocate (No Transfer): verification | Elements: 17000000 | Type: unsigned long | Size: 136000000 bytes (H-to-D)
+GPU Intialization complete. Allocated 327 MB of data on GPU. 
+
+================================================================================
+                                   SIMULATION
+================================================================================
+Running baseline event-based simulation...
+[DEBUG] Transfer: verification (RESULTS) | Elements: 17000000 | Type: unsigned long | Size: 136000000 bytes (D-to-H)
+Reducing verification results...
+
+Simulation complete.
+================================================================================
+                                     RESULTS
+================================================================================
+NOTE: Timings are estimated -- use nvprof/nsys/iprof/rocprof for formal analysis
+Runtime:     17.655 seconds
+Lookups:     17,000,000
+Lookups/s:   962,910
+Verification checksum: 952131 (Valid)
+================================================================================
+host_to_device_ms,kernel_ms,device_to_host_ms,num_iterations,num_warmups
+243.860006,15906.144142,142.060041,150,15
