@@ -1,17 +1,6 @@
 #include "XSbench_header.cuh"
 
-////////////////////////////////////////////////////////////////////////////////////
-// BASELINE FUNCTIONS
-////////////////////////////////////////////////////////////////////////////////////
-// All "baseline" code is at the top of this file. The baseline code is a simple
-// port of the original CPU OpenMP code to CUDA with few significant changes or
-// optimizations made. Following these functions are a number of optimized variants,
-// which each deploy a different combination of optimizations strategies. By
-// default, XSBench will only run the baseline implementation. Optimized variants
-// must be specifically selected using the "-k <optimized variant ID>" command
-// line argument.
-////////////////////////////////////////////////////////////////////////////////////
-
+// >>> START EDITABLE REGION ID=0
 unsigned long long run_event_based_simulation(Inputs in, SimulationData SD, int mype, Profile* profile, int nthreads)
 {
 	double start = get_time();
@@ -56,7 +45,9 @@ unsigned long long run_event_based_simulation(Inputs in, SimulationData SD, int 
 
         return verification_scalar;
 }
+// <<< END EDITABLE REGION ID=0
 
+// >>> START EDITABLE REGION ID=1
 // In this kernel, we perform a single lookup with each thread.
 __global__ void xs_lookup_kernel(Inputs in, SimulationData GSD )
 {
@@ -114,7 +105,9 @@ __global__ void xs_lookup_kernel(Inputs in, SimulationData GSD )
         }
         GSD.verification[i] = max_idx+1;
 }
+// <<< END EDITABLE REGION ID=1
 
+// >>> START EDITABLE REGION ID=2
 // Calculates the microscopic cross section for a given nuclide & energy
 __device__ void calculate_micro_xs(   double p_energy, int nuc, long n_isotopes,
                                    long n_gridpoints,
@@ -199,7 +192,9 @@ __device__ void calculate_micro_xs(   double p_energy, int nuc, long n_isotopes,
         // Nu Fission XS
         xs_vector[4] = high->nu_fission_xs - f * (high->nu_fission_xs - low->nu_fission_xs);
 }
+// <<< END EDITABLE REGION ID=2
 
+// >>> START EDITABLE REGION ID=3
 // Calculates macroscopic cross section based on a given material & energy
 __device__ void calculate_macro_xs( double p_energy, int mat, long n_isotopes,
                                    long n_gridpoints, int * __restrict__ num_nucs,
@@ -251,8 +246,9 @@ __device__ void calculate_macro_xs( double p_energy, int mat, long n_isotopes,
                         macro_xs_vector[k] += xs_vector[k] * conc;
         }
 }
+// <<< END EDITABLE REGION ID=3
 
-
+// >>> START EDITABLE REGION ID=4
 // binary search for energy on unionized energy grid
 // returns lower index
 __device__ long grid_search( long n, double quarry, double * __restrict__ A)
@@ -276,7 +272,9 @@ __device__ long grid_search( long n, double quarry, double * __restrict__ A)
 
         return lowerLimit;
 }
+// <<< END EDITABLE REGION ID=4
 
+// >>> START EDITABLE REGION ID=5
 // binary search for energy on nuclide energy grid
 __host__ __device__ long grid_search_nuclide( long n, double quarry, NuclideGridPoint * A, long low, long high)
 {
@@ -299,7 +297,9 @@ __host__ __device__ long grid_search_nuclide( long n, double quarry, NuclideGrid
 
         return lowerLimit;
 }
+// <<< END EDITABLE REGION ID=5
 
+// >>> START EDITABLE REGION ID=6
 // picks a material based on a probabilistic distribution
 __device__ int pick_mat( uint64_t * seed )
 {
@@ -339,7 +339,9 @@ __device__ int pick_mat( uint64_t * seed )
 
         return 0;
 }
+// <<< END EDITABLE REGION ID=6
 
+// >>> START EDITABLE REGION ID=7
 __host__ __device__ double LCG_random_double(uint64_t * seed)
 {
         // LCG parameters
@@ -349,7 +351,9 @@ __host__ __device__ double LCG_random_double(uint64_t * seed)
         *seed = (a * (*seed) + c) % m;
         return (double) (*seed) / (double) m;
 }
+// <<< END EDITABLE REGION ID=7
 
+// >>> START EDITABLE REGION ID=8
 __device__ uint64_t fast_forward_LCG(uint64_t seed, uint64_t n)
 {
         // LCG parameters
@@ -377,3 +381,4 @@ __device__ uint64_t fast_forward_LCG(uint64_t seed, uint64_t n)
 
         return (a_new * seed + c_new) % m;
 }
+// <<< END EDITABLE REGION ID=8
