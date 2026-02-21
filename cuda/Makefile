@@ -38,7 +38,7 @@ LDFLAGS = -lm
 # NVIDIA Compiler
 ifeq ($(COMPILER),nvidia)
   CC = nvcc
-  CFLAGS += -Xcompiler -Wall -Xcompiler -O3 -lineinfo -arch=sm_$(SM_VERSION) -std=c++14
+  CFLAGS += -Xcompiler -Wall -Xcompiler -O3 -lineinfo -arch=sm_$(SM_VERSION) -std=c++17
 endif
 
 # Debug Flags
