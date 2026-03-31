@@ -33,11 +33,11 @@ obj = $(source:.cu=.o)
 CFLAGS := 
 
 # Linker Flags
-LDFLAGS = -lm
+LDFLAGS = -lm -lstdc++
 
 # NVIDIA Compiler
 ifeq ($(COMPILER),nvidia)
-  CC = nvcc
+  CC = nvcc -ccbin gcc-13
   CFLAGS += -Xcompiler -Wall -Xcompiler -O3 -lineinfo -arch=sm_$(SM_VERSION) -std=c++17
 endif
 
