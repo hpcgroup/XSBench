@@ -8,6 +8,7 @@ DEBUG       ?= no
 PROFILE     ?= no
 SM_VERSION  ?= 80
 REG_COUNT   ?=
+CUDA_HOME   ?= /usr/local/cuda
 
 #===============================================================================
 # Program name & source code list
@@ -37,7 +38,7 @@ LDFLAGS = -lm
 
 # NVIDIA Compiler
 ifeq ($(COMPILER),nvidia)
-  CC = nvcc
+  CC = $(CUDA_HOME)/bin/nvcc
   CFLAGS += -Xcompiler -Wall -Xcompiler -O3 -lineinfo -arch=sm_$(SM_VERSION) -std=c++17
 endif
 
