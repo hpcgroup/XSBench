@@ -2,6 +2,7 @@
 // Note that there are 12 materials present in H-M (large or small)
 
 #include "XSbench_header.h"
+#include <cstring>  
 
 // num_nucs represents the number of nuclides that each material contains
 int * load_num_nucs(long n_isotopes)

@@ -1,4 +1,5 @@
 #include "XSbench_header.h"
+#include <cstring>
 
 // Prints program logo
 void logo(int version)
