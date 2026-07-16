@@ -20,9 +20,14 @@ unsigned long long run_event_based_simulation_baseline(Inputs in, SimulationData
 	////////////////////////////////////////////////////////////////////////////////
 	if( mype == 0)	printf("Running baseline event-based simulation...\n");
 
-	int nthreads = 256;
-	int nblocks = ceil( (double) in.lookups / (double) nthreads);
+	int nthreads = 256; //thread per workgroup
+	int nblocks = ceil( (double) in.lookups / (double) nthreads); //full grid, total workgroup number
 
+	if(const char* c=getenv("XS_BLOCK_CAP")){
+		int cap=atoi(c);
+		if(cap > 0 &&cap<nblocks) nblocks=cap; //set block as cap
+	}
+	
 	int nwarmups = in.num_warmups;
 	double start = 0.0;
 	for (int i = 0; i < in.num_iterations + nwarmups; i++) {
@@ -54,66 +59,100 @@ unsigned long long run_event_based_simulation_baseline(Inputs in, SimulationData
 
 	return verification_scalar;
 }
+__global__ void xs_lookup_kernel_baseline(Inputs in, SimulationData GSD)
+{
+	const int stride=gridDim.x*blockDim.x; //total threads in current kernel (nblock*nthread)
 
+	for(int i=blockIdx.x*blockDim.x+threadIdx.x; // thread id (global)
+		i<in.lookups ; 	//total 17,000,000
+		i += stride)	//each thread loops
+	{ 
+		uint64_t seed=STARTING_SEED;
+		seed=fast_forward_LCG(seed, 2*i); //결정론적 난수 생성 빨리감기
+		
+		//2 lookups
+		double p_energy=LCG_random_double(&seed); 
+		int mat=pick_mat(&seed);
+
+		double macro_xs_vector[5]={0};
+		calculate_macro_xs( //actual computation
+			p_energy, mat, in.n_isotopes, in.n_gridpoints,
+            GSD.num_nucs, GSD.concs, GSD.unionized_energy_array,
+            GSD.index_grid, GSD.nuclide_grid, GSD.mats,
+            macro_xs_vector, in.grid_type, in.hash_bins, GSD.max_num_nucs
+		);
+
+		double max=-1.0;
+		int max_idx=0;
+		//maximum reduction, biggest of 5 channels
+		for(int j=0; j<5; j++){
+			if(macro_xs_vector[j]>max) {
+				max=macro_xs_vector[j];
+				max_idx=j;
+			}
+		}
+		GSD.verification[i]=max_idx+1;
+	}
+}
 // In this kernel, we perform a single lookup with each thread. Threads within a warp
 // do not really have any relation to each other, and divergence due to high nuclide count fuel
 // material lookups are costly. This kernel constitutes baseline performance.
-__global__ void xs_lookup_kernel_baseline(Inputs in, SimulationData GSD )
-{
-	// The lookup ID. Used to set the seed, and to store the verification value
-	const int i = blockIdx.x *blockDim.x + threadIdx.x;
+// __global__ void xs_lookup_kernel_baseline(Inputs in, SimulationData GSD )
+// {
+// 	// The lookup ID. Used to set the seed, and to store the verification value
+// 	const int i = blockIdx.x *blockDim.x + threadIdx.x;
 
-	if( i >= in.lookups )
-	    return;
+// 	if( i >= in.lookups )
+// 	    return;
 
-	// Set the initial seed value
-	uint64_t seed = STARTING_SEED;
+// 	// Set the initial seed value
+// 	uint64_t seed = STARTING_SEED;
 
-	// Forward seed to lookup index (we need 2 samples per lookup)
-	seed = fast_forward_LCG(seed, 2*i);
+// 	// Forward seed to lookup index (we need 2 samples per lookup)
+// 	seed = fast_forward_LCG(seed, 2*i);
 
-	// Randomly pick an energy and material for the particle
-	double p_energy = LCG_random_double(&seed);
-	int mat         = pick_mat(&seed);
+// 	// Randomly pick an energy and material for the particle
+// 	double p_energy = LCG_random_double(&seed);
+// 	int mat         = pick_mat(&seed);
 
-	double macro_xs_vector[5] = {0};
+// 	double macro_xs_vector[5] = {0};
 
-	// Perform macroscopic Cross Section Lookup
-	calculate_macro_xs(
-		p_energy,        // Sampled neutron energy (in lethargy)
-		mat,             // Sampled material type index neutron is in
-		in.n_isotopes,   // Total number of isotopes in simulation
-		in.n_gridpoints, // Number of gridpoints per isotope in simulation
-		GSD.num_nucs,     // 1-D array with number of nuclides per material
-		GSD.concs,        // Flattened 2-D array with concentration of each nuclide in each material
-		GSD.unionized_energy_array, // 1-D Unionized energy array
-		GSD.index_grid,   // Flattened 2-D grid holding indices into nuclide grid for each unionized energy level
-		GSD.nuclide_grid, // Flattened 2-D grid holding energy levels and XS_data for all nuclides in simulation
-		GSD.mats,         // Flattened 2-D array with nuclide indices defining composition of each type of material
-		macro_xs_vector, // 1-D array with result of the macroscopic cross section (5 different reaction channels)
-		in.grid_type,    // Lookup type (nuclide, hash, or unionized)
-		in.hash_bins,    // Number of hash bins used (if using hash lookup type)
-		GSD.max_num_nucs  // Maximum number of nuclides present in any material
-		);
+// 	// Perform macroscopic Cross Section Lookup
+// 	calculate_macro_xs(
+// 		p_energy,        // Sampled neutron energy (in lethargy)
+// 		mat,             // Sampled material type index neutron is in
+// 		in.n_isotopes,   // Total number of isotopes in simulation
+// 		in.n_gridpoints, // Number of gridpoints per isotope in simulation
+// 		GSD.num_nucs,     // 1-D array with number of nuclides per material
+// 		GSD.concs,        // Flattened 2-D array with concentration of each nuclide in each material
+// 		GSD.unionized_energy_array, // 1-D Unionized energy array
+// 		GSD.index_grid,   // Flattened 2-D grid holding indices into nuclide grid for each unionized energy level
+// 		GSD.nuclide_grid, // Flattened 2-D grid holding energy levels and XS_data for all nuclides in simulation
+// 		GSD.mats,         // Flattened 2-D array with nuclide indices defining composition of each type of material
+// 		macro_xs_vector, // 1-D array with result of the macroscopic cross section (5 different reaction channels)
+// 		in.grid_type,    // Lookup type (nuclide, hash, or unionized)
+// 		in.hash_bins,    // Number of hash bins used (if using hash lookup type)
+// 		GSD.max_num_nucs  // Maximum number of nuclides present in any material
+// 		);
 
-	// For verification, and to prevent the compiler from optimizing
-	// all work out, we interrogate the returned macro_xs_vector array
-	// to find its maximum value index, then increment the verification
-	// value by that index. In this implementation, we have each thread
-	// write to its thread_id index in an array, which we will reduce
-	// with a thrust reduction kernel after the main simulation kernel.
-	double max = -1.0;
-	int max_idx = 0;
-	for(int j = 0; j < 5; j++ )
-	{
-	    if( macro_xs_vector[j] > max )
-	    {
-		max = macro_xs_vector[j];
-		max_idx = j;
-	    }
-	}
-	GSD.verification[i] = max_idx+1;
-}
+// 	// For verification, and to prevent the compiler from optimizing
+// 	// all work out, we interrogate the returned macro_xs_vector array
+// 	// to find its maximum value index, then increment the verification
+// 	// value by that index. In this implementation, we have each thread
+// 	// write to its thread_id index in an array, which we will reduce
+// 	// with a thrust reduction kernel after the main simulation kernel.
+// 	double max = -1.0;
+// 	int max_idx = 0;
+// 	for(int j = 0; j < 5; j++ )
+// 	{
+// 	    if( macro_xs_vector[j] > max )
+// 	    {
+// 		max = macro_xs_vector[j];
+// 		max_idx = j;
+// 	    }
+// 	}
+// 	GSD.verification[i] = max_idx+1;
+// }
 
 // Calculates the microscopic cross section for a given nuclide & energy
 __device__ void calculate_micro_xs(   double p_energy, int nuc, long n_isotopes,
