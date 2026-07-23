@@ -18,6 +18,7 @@ typedef struct{
         int num_iterations;
         int num_warmups;
         char *filename;
+        int block_cap; //grid stride loop 
 } Inputs;
 
 typedef struct{

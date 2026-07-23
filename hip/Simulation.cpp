@@ -23,10 +23,7 @@ unsigned long long run_event_based_simulation_baseline(Inputs in, SimulationData
 	int nthreads = 256; //thread per workgroup
 	int nblocks = ceil( (double) in.lookups / (double) nthreads); //full grid, total workgroup number
 
-	if(const char* c=getenv("XS_BLOCK_CAP")){
-		int cap=atoi(c);
-		if(cap > 0 &&cap<nblocks) nblocks=cap; //set block as cap
-	}
+	if(in.block_cap>0 && in.block_cap < nblocks) nblocks=in.block_cap;
 	
 	int nwarmups = in.num_warmups;
 	double start = 0.0;

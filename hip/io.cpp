@@ -1,4 +1,5 @@
 #include "XSbench_header.h"
+#include <cstring>
 
 // Prints program logo
 void logo(int version)
@@ -141,6 +142,7 @@ void print_inputs(Inputs in, int nprocs, int version )
 	printf("H-M Benchmark Size:           %s\n", in.HM);
 	printf("Total Nuclides:               %ld\n", in.n_isotopes);
 	printf("Gridpoints (per Nuclide):     ");
+	if( in.block_cap > 0 ) printf("Block Cap (grid-stride): %d\n", in.block_cap);
 	fancy_int(in.n_gridpoints);
 	if( in.grid_type == HASH )
 	{
@@ -220,6 +222,7 @@ void print_CLI_error(void)
 	printf("  -b <binary mode>         Read or write all data structures to file. If reading, this will skip initialization phase. (read, write)\n");
 	printf("  -k <kernel ID>           Specifies which kernel to run. 0 is baseline, 1, 2, etc are optimized variants. (0 is default.)\n");
 	printf("  -n <num. iterations>     Specifies how many kernel iterations to run. (1 is default.)\n");
+	printf("  -c --block-cap <blocks>  Grid-stride: cap thread blocks (0 = full grid, default)\n");
 	printf("Default is equivalent to: -m history -s large -l 34 -p 500000 -G unionized -k 0 -n 1\n");
 	printf("See readme for full description of default run values\n");
 	exit(4);
@@ -264,6 +267,9 @@ Inputs read_CLI( int argc, char * argv[] )
 
   // default to zero warmup iterations
 	input.num_warmups = 1;
+
+  //default to no block cap (full grid)
+	input.block_cap=0;
 
   // default to stdout
   input.filename = NULL;
@@ -432,6 +438,10 @@ Inputs read_CLI( int argc, char * argv[] )
 			}
 			else
 				print_CLI_error();
+		}
+		else if(strcmp (arg, "-c")==0||strcmp(arg, "--block-cap")){
+			if(++i <argc) input.block_cap=atoi(argv[i]);
+			else print_CLI_error();
 		}
 		else
 		print_CLI_error();
