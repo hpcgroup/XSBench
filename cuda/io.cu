@@ -157,6 +157,7 @@ void print_inputs(Inputs in, int nprocs, int version )
 		printf("Particle Histories:           "); fancy_int(in.particles);
 		printf("XS Lookups per Particle:      "); fancy_int(in.lookups);
 	}
+	if( in.block_cap > 0 ) printf("Block Cap (grid-stride):      %d\n", in.block_cap);
 	printf("Total XS Lookups:             "); fancy_int(in.lookups);
 	printf("Total XS Iterations:          "); fancy_int(in.num_iterations);
 	#ifdef MPI
@@ -266,6 +267,9 @@ Inputs read_CLI( int argc, char * argv[] )
 
 	// default to zero warmup iterations
 	input.num_warmups = 1;
+
+	//	default to full grid
+	input.block_cap=0;
 
   // default to stdout
   input.filename = NULL;
@@ -434,6 +438,10 @@ Inputs read_CLI( int argc, char * argv[] )
 			}
 			else
 				print_CLI_error();
+		}
+		else if(strcmp(arg, "-c")==0 || strcmp(arg, "--block-cap")==0){
+			if(++i <argc) input.block_cap = atoi (argv[i]);
+			else print_CLI_error();
 		}
 		else
 			print_CLI_error();

@@ -26,6 +26,7 @@ unsigned long long run_event_based_simulation_baseline(Inputs in, SimulationData
 
         int nthreads = 256;
         int nblocks = ceil( (double) in.lookups / (double) nthreads);
+        if( in.block_cap > 0 && in.block_cap < nblocks ) nblocks = in.block_cap;
 
 	int nwarmups = in.num_warmups;
 	start = 0.0;
@@ -64,58 +65,59 @@ unsigned long long run_event_based_simulation_baseline(Inputs in, SimulationData
 __global__ void xs_lookup_kernel_baseline(Inputs in, SimulationData GSD )
 {
         // The lookup ID. Used to set the seed, and to store the verification value
-        const int i = blockIdx.x *blockDim.x + threadIdx.x;
-
-        if( i >= in.lookups )
-                return;
-
-        // Set the initial seed value
-        uint64_t seed = STARTING_SEED;
-
-        // Forward seed to lookup index (we need 2 samples per lookup)
-        seed = fast_forward_LCG(seed, 2*i);
-
-        // Randomly pick an energy and material for the particle
-        double p_energy = LCG_random_double(&seed);
-        int mat         = pick_mat(&seed);
-
-        double macro_xs_vector[5] = {0};
-
-        // Perform macroscopic Cross Section Lookup
-        calculate_macro_xs(
-                p_energy,        // Sampled neutron energy (in lethargy)
-                mat,             // Sampled material type index neutron is in
-                in.n_isotopes,   // Total number of isotopes in simulation
-                in.n_gridpoints, // Number of gridpoints per isotope in simulation
-                GSD.num_nucs,     // 1-D array with number of nuclides per material
-                GSD.concs,        // Flattened 2-D array with concentration of each nuclide in each material
-                GSD.unionized_energy_array, // 1-D Unionized energy array
-                GSD.index_grid,   // Flattened 2-D grid holding indices into nuclide grid for each unionized energy level
-                GSD.nuclide_grid, // Flattened 2-D grid holding energy levels and XS_data for all nuclides in simulation
-                GSD.mats,         // Flattened 2-D array with nuclide indices defining composition of each type of material
-                macro_xs_vector, // 1-D array with result of the macroscopic cross section (5 different reaction channels)
-                in.grid_type,    // Lookup type (nuclide, hash, or unionized)
-                in.hash_bins,    // Number of hash bins used (if using hash lookup type)
-                GSD.max_num_nucs  // Maximum number of nuclides present in any material
-        );
-
-        // For verification, and to prevent the compiler from optimizing
-        // all work out, we interrogate the returned macro_xs_vector array
-        // to find its maximum value index, then increment the verification
-        // value by that index. In this implementation, we have each thread
-        // write to its thread_id index in an array, which we will reduce
-        // with a thrust reduction kernel after the main simulation kernel.
-        double max = -1.0;
-        int max_idx = 0;
-        for(int j = 0; j < 5; j++ )
+        const int stride=gridDim.x*blockDim.x;
+        for (int i = blockIdx.x *blockDim.x + threadIdx.x;
+                i<in.lookups; i+=stride)
         {
-                if( macro_xs_vector[j] > max )
+                // Set the initial seed value
+                uint64_t seed = STARTING_SEED;
+
+                // Forward seed to lookup index (we need 2 samples per lookup)
+                seed = fast_forward_LCG(seed, 2*i);
+
+                // Randomly pick an energy and material for the particle
+                double p_energy = LCG_random_double(&seed);
+                int mat         = pick_mat(&seed);
+
+                double macro_xs_vector[5] = {0};
+
+                // Perform macroscopic Cross Section Lookup
+                calculate_macro_xs(
+                        p_energy,        // Sampled neutron energy (in lethargy)
+                        mat,             // Sampled material type index neutron is in
+                        in.n_isotopes,   // Total number of isotopes in simulation
+                        in.n_gridpoints, // Number of gridpoints per isotope in simulation
+                        GSD.num_nucs,     // 1-D array with number of nuclides per material
+                        GSD.concs,        // Flattened 2-D array with concentration of each nuclide in each material
+                        GSD.unionized_energy_array, // 1-D Unionized energy array
+                        GSD.index_grid,   // Flattened 2-D grid holding indices into nuclide grid for each unionized energy level
+                        GSD.nuclide_grid, // Flattened 2-D grid holding energy levels and XS_data for all nuclides in simulation
+                        GSD.mats,         // Flattened 2-D array with nuclide indices defining composition of each type of material
+                        macro_xs_vector, // 1-D array with result of the macroscopic cross section (5 different reaction channels)
+                        in.grid_type,    // Lookup type (nuclide, hash, or unionized)
+                        in.hash_bins,    // Number of hash bins used (if using hash lookup type)
+                        GSD.max_num_nucs  // Maximum number of nuclides present in any material
+                );
+
+                // For verification, and to prevent the compiler from optimizing
+                // all work out, we interrogate the returned macro_xs_vector array
+                // to find its maximum value index, then increment the verification
+                // value by that index. In this implementation, we have each thread
+                // write to its thread_id index in an array, which we will reduce
+                // with a thrust reduction kernel after the main simulation kernel.
+                double max = -1.0;
+                int max_idx = 0;
+                for(int j = 0; j < 5; j++ )
                 {
-                        max = macro_xs_vector[j];
-                        max_idx = j;
+                        if( macro_xs_vector[j] > max )
+                        {
+                                max = macro_xs_vector[j];
+                                max_idx = j;
+                        }
                 }
+                GSD.verification[i] = max_idx+1;
         }
-        GSD.verification[i] = max_idx+1;
+
 }
 
 // Calculates the microscopic cross section for a given nuclide & energy
