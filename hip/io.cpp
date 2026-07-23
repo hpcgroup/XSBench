@@ -142,7 +142,6 @@ void print_inputs(Inputs in, int nprocs, int version )
 	printf("H-M Benchmark Size:           %s\n", in.HM);
 	printf("Total Nuclides:               %ld\n", in.n_isotopes);
 	printf("Gridpoints (per Nuclide):     ");
-	if( in.block_cap > 0 ) printf("Block Cap (grid-stride): %d\n", in.block_cap);
 	fancy_int(in.n_gridpoints);
 	if( in.grid_type == HASH )
 	{
@@ -159,6 +158,7 @@ void print_inputs(Inputs in, int nprocs, int version )
 		printf("Particle Histories:           "); fancy_int(in.particles);
 		printf("XS Lookups per Particle:      "); fancy_int(in.lookups);
 	}
+	if( in.block_cap > 0 ) printf("Block Cap (grid-stride):      %d\n", in.block_cap);
 	printf("Total XS Lookups:             "); fancy_int(in.lookups);
 	printf("Total XS Iterations:          "); fancy_int(in.num_iterations);
 #ifdef MPI
