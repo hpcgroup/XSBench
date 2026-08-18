@@ -11,7 +11,6 @@
 #include<chrono>
 #include<assert.h>
 #include<stdint.h>
-#include "../XSbench_shared_header.h"
 
 #include <Kokkos_Core.hpp>
 
@@ -46,6 +45,20 @@ typedef struct{
 	double fission_xs;
 	double nu_fission_xs;
 } NuclideGridPoint;
+
+typedef struct{
+        int nthreads;
+        long n_isotopes;
+        long n_gridpoints;
+        int lookups;
+        char * HM;
+        int grid_type; // 0: Unionized Grid (default)    1: Nuclide Grid
+        int hash_bins;
+        int particles;
+        int simulation_method;
+        int binary_mode;
+        int kernel_id;
+} Inputs;
 
 typedef Kokkos::View<int*> IntView;
 typedef Kokkos::View<double*> DoubleView;
