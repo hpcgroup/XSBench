@@ -79,75 +79,72 @@ unsigned long long run_event_based_simulation(Inputs in, SimulationData SD, int 
 
         if(mype==0) printf("Beginning event based simulation...\n");
 
-        int nwarmups = in.num_warmups;
         startP = 0.0;
-        for (int it = 0; it < in.num_iterations + nwarmups; it++) {
+        ////////////////////////////////////////////////////////////////////////////////
+        // Define Device Kernel
+        ////////////////////////////////////////////////////////////////////////////////
+
+        // queue a kernel to be run, as a lambda
+        sycl_q.submit([&](sycl::handler &cgh) {
                 ////////////////////////////////////////////////////////////////////////////////
-                // Define Device Kernel
+                // XS Lookup Simulation Loop
                 ////////////////////////////////////////////////////////////////////////////////
+                cgh.parallel_for<sycl::kernel>(sycl::range<1>(in.lookups), [=](sycl::id<1> idx) {
+                        // get the index to operate on, first dimemsion
+                        size_t i = idx[0];
 
-                // queue a kernel to be run, as a lambda
-                sycl_q.submit([&](sycl::handler &cgh) {
-                        ////////////////////////////////////////////////////////////////////////////////
-                        // XS Lookup Simulation Loop
-                        ////////////////////////////////////////////////////////////////////////////////
-                        cgh.parallel_for<sycl::kernel>(sycl::range<1>(in.lookups), [=](sycl::id<1> idx) {
-                                // get the index to operate on, first dimemsion
-                                size_t i = idx[0];
+                        // Set the initial seed value
+                        uint64_t seed = STARTING_SEED;	
 
-                                // Set the initial seed value
-                                uint64_t seed = STARTING_SEED;	
+                        // Forward seed to lookup index (we need 2 samples per lookup)
+                        seed = fast_forward_LCG(seed, 2*i);
 
-                                // Forward seed to lookup index (we need 2 samples per lookup)
-                                seed = fast_forward_LCG(seed, 2*i);
+                        // Randomly pick an energy and material for the particle
+                        double p_energy = LCG_random_double(&seed);
+                        int mat         = pick_mat(&seed); 
 
-                                // Randomly pick an energy and material for the particle
-                                double p_energy = LCG_random_double(&seed);
-                                int mat         = pick_mat(&seed); 
+                        // debugging
+                        //printf("E = %lf mat = %d\n", p_energy, mat);
 
-                                // debugging
-                                //printf("E = %lf mat = %d\n", p_energy, mat);
+                        double macro_xs_vector[5] = {0};
 
-                                double macro_xs_vector[5] = {0};
+                        // Perform macroscopic Cross Section Lookup
+                        calculate_macro_xs(
+                                p_energy,        // Sampled neutron energy (in lethargy)
+                                mat,             // Sampled material type index neutron is in
+                                in.n_isotopes,   // Total number of isotopes in simulation
+                                in.n_gridpoints, // Number of gridpoints per isotope in simulation
+                                num_nucs,     // 1-D array with number of nuclides per material
+                                concs,        // Flattened 2-D array with concentration of each nuclide in each material
+                                unionized_energy_array, // 1-D Unionized energy array
+                                index_grid,   // Flattened 2-D grid holding indices into nuclide grid for each unionized energy level
+                                nuclide_grid, // Flattened 2-D grid holding energy levels and XS_data for all nuclides in simulation
+                                mats,         // Flattened 2-D array with nuclide indices defining composition of each type of material
+                                macro_xs_vector, // 1-D array with result of the macroscopic cross section (5 different reaction channels)
+                                in.grid_type,    // Lookup type (nuclide, hash, or unionized)
+                                in.hash_bins,    // Number of hash bins used (if using hash lookup type)
+                                SD.max_num_nucs  // Maximum number of nuclides present in any material
+                        );
 
-                                // Perform macroscopic Cross Section Lookup
-                                calculate_macro_xs(
-                                        p_energy,        // Sampled neutron energy (in lethargy)
-                                        mat,             // Sampled material type index neutron is in
-                                        in.n_isotopes,   // Total number of isotopes in simulation
-                                        in.n_gridpoints, // Number of gridpoints per isotope in simulation
-                                        num_nucs,     // 1-D array with number of nuclides per material
-                                        concs,        // Flattened 2-D array with concentration of each nuclide in each material
-                                        unionized_energy_array, // 1-D Unionized energy array
-                                        index_grid,   // Flattened 2-D grid holding indices into nuclide grid for each unionized energy level
-                                        nuclide_grid, // Flattened 2-D grid holding energy levels and XS_data for all nuclides in simulation
-                                        mats,         // Flattened 2-D array with nuclide indices defining composition of each type of material
-                                        macro_xs_vector, // 1-D array with result of the macroscopic cross section (5 different reaction channels)
-                                        in.grid_type,    // Lookup type (nuclide, hash, or unionized)
-                                        in.hash_bins,    // Number of hash bins used (if using hash lookup type)
-                                        SD.max_num_nucs  // Maximum number of nuclides present in any material
-                                );
-
-                                // For verification, and to prevent the compiler from optimizing
-                                // all work out, we interrogate the returned macro_xs_vector array
-                                // to find its maximum value index, then increment the verification
-                                // value by that index. In this implementation, we store to a global
-                                // array that will get tranferred back and reduced on the host.
-                                double max = -1.0;
-                                int max_idx = 0;
-                                for(int j = 0; j < 5; j++ )
+                        // For verification, and to prevent the compiler from optimizing
+                        // all work out, we interrogate the returned macro_xs_vector array
+                        // to find its maximum value index, then increment the verification
+                        // value by that index. In this implementation, we store to a global
+                        // array that will get tranferred back and reduced on the host.
+                        double max = -1.0;
+                        int max_idx = 0;
+                        for(int j = 0; j < 5; j++ )
+                        {
+                                if( macro_xs_vector[j] > max )
                                 {
-                                        if( macro_xs_vector[j] > max )
-                                        {
-                                                max = macro_xs_vector[j];
-                                                max_idx = j;
-                                        }
+                                        max = macro_xs_vector[j];
+                                        max_idx = j;
                                 }
-                                verification[i] = max_idx+1;
+                        }
+                        verification[i] = max_idx+1;
 
-                        });
                 });
-        }
+        });
         stop = get_time();
 
         if(mype==0) printf("Kernel initialization, compilation, and launch took %.2lf seconds.\n", stop-start);

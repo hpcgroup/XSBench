@@ -23,13 +23,7 @@ unsigned long long run_event_based_simulation_baseline(Inputs in, SimulationData
 	int nthreads = 256;
 	int nblocks = ceil( (double) in.lookups / (double) nthreads);
 
-	int nwarmups = in.num_warmups;
-	for (int i = 0; i < in.num_iterations + nwarmups; i++) {
-		if (i == nwarmups) {
-			gpuErrchk( hipDeviceSynchronize() );
-		}
-		hipLaunchKernelGGL(xs_lookup_kernel_baseline, dim3(nblocks), dim3(nthreads), 0, 0,  in, GSD );
-	}
+	hipLaunchKernelGGL(xs_lookup_kernel_baseline, dim3(nblocks), dim3(nthreads), 0, 0,  in, GSD );
 	gpuErrchk( hipPeekAtLastError() );
 	gpuErrchk( hipDeviceSynchronize() );
 

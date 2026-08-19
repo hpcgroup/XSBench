@@ -25,15 +25,8 @@ unsigned long long run_event_based_simulation_baseline(Inputs in, SimulationData
         int nthreads = 256;
         int nblocks = ceil( (double) in.lookups / (double) nthreads);
 
-	int nwarmups = in.num_warmups;
 	start = 0.0;
-	for (int i = 0; i < in.num_iterations + nwarmups; i++) {
-		if (i == nwarmups) {
-			gpuErrchk( cudaDeviceSynchronize() );
-			start = get_time();
-		}
-		xs_lookup_kernel_baseline<<<nblocks, nthreads>>>( in, GSD );
-	}
+        xs_lookup_kernel_baseline<<<nblocks, nthreads>>>( in, GSD );
 	gpuErrchk( cudaPeekAtLastError() );
 	gpuErrchk( cudaDeviceSynchronize() );
 
@@ -1111,22 +1104,4 @@ unsigned long long run_event_based_simulation_optimization_6(Inputs in, Simulati
         gpuErrchk( cudaDeviceSynchronize() );
 
         return verification_scalar;
-}
-turn verification_scalar;
-}
-hronize() );
-
-        return verification_scalar;
-}
-rification_scalar;
-}
-) );
-
-        return verification_scalar;
-}
-hronize() );
-
-        return verification_scalar;
-}
-ication_scalar;
 }
