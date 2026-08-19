@@ -21,10 +21,8 @@ int main( int argc, char* argv[] )
 	MPI_Comm_rank(MPI_COMM_WORLD, &mype);
 	#endif
 
-	Profile profile;
-
-        // Start Kokkos
-        Kokkos::initialize();
+	// Start Kokkos
+	Kokkos::initialize();
 
 	// Process CLI Fields -- store in "Inputs" structure
 	Inputs in = read_CLI( argc, argv );
@@ -79,7 +77,7 @@ int main( int argc, char* argv[] )
 	if( in.simulation_method == EVENT_BASED )
 	{
 		if( in.kernel_id == 0 )
-			verification = run_event_based_simulation(in, SD, mype, &elapsed_time, &profile);
+			verification = run_event_based_simulation(in, SD, mype, &elapsed_time);
 		else
 		{
 			printf("Error: No kernel ID %d found!\n", in.kernel_id);
@@ -113,8 +111,6 @@ int main( int argc, char* argv[] )
 	#ifdef MPI
 	MPI_Finalize();
 	#endif
-
-	print_profile(profile, in);
 
 	return is_invalid_result;
 }

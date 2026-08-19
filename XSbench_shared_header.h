@@ -4,23 +4,6 @@
 // Header for shared utilities across XSBench versions
 
 typedef struct{
-        int nthreads;
-        long n_isotopes;
-        long n_gridpoints;
-        int lookups;
-        char * HM;
-        int grid_type; // 0: Unionized Grid (default)    1: Nuclide Grid
-        int hash_bins;
-        int particles;
-        int simulation_method;
-        int binary_mode;
-        int kernel_id;
-        int num_iterations;
-        int num_warmups;
-        char *filename;
-} Inputs;
-
-typedef struct{
 	double device_to_host_time;
 	double kernel_time;
 	double host_to_device_time;

@@ -9,7 +9,6 @@
 #include<hip/hip_runtime.h>
 #include<stdint.h>
 #include <chrono>
-#include "../XSbench_shared_header.h"
 
 // Grid types
 #define UNIONIZED 0
@@ -49,6 +48,20 @@ typedef struct{
 } NuclideGridPoint;
 
 typedef struct{
+        int nthreads;
+        long n_isotopes;
+        long n_gridpoints;
+        int lookups;
+        char * HM;
+        int grid_type; // 0: Unionized Grid (default)    1: Nuclide Grid
+        int hash_bins;
+        int particles;
+        int simulation_method;
+        int binary_mode;
+        int kernel_id;
+} Inputs;
+
+typedef struct{
 	int * num_nucs;                     // Length = length_num_nucs;
 	double * concs;                     // Length = length_concs
 	int * mats;                         // Length = length_mats
@@ -83,7 +96,7 @@ void binary_write( Inputs in, SimulationData SD );
 SimulationData binary_read( Inputs in );
 
 // Simulation.cu
-unsigned long long run_event_based_simulation_baseline(Inputs in, SimulationData SD, int mype, Profile* profile);
+unsigned long long run_event_based_simulation_baseline(Inputs in, SimulationData SD, int mype);
 __global__ void xs_lookup_kernel_baseline(Inputs in, SimulationData GSD );
 __device__ void calculate_micro_xs(   double p_energy, int nuc, long n_isotopes,
 				   long n_gridpoints,
