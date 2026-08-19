@@ -111,7 +111,7 @@ void binary_write( Inputs in, SimulationData SD );
 SimulationData binary_read( Inputs in );
 
 // Simulation.cpp
-unsigned long long run_event_based_simulation_baseline(Inputs in, SimulationData SD, int mype, Profile* profile);
+unsigned long long run_event_based_simulation_baseline(Inputs in, SimulationData SD, int mype);
 RAJA_HOST_DEVICE void calculate_micro_xs(   double p_energy, int nuc, long n_isotopes,
                                          long n_gridpoints,
                                          double * __restrict__ egrid, int * __restrict__ index_data,

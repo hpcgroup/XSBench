@@ -12,7 +12,7 @@
 ////////////////////////////////////////////////////////////////////////////////////
 
 // use SYCL namespace to reduce symbol names
-unsigned long long run_event_based_simulation(Inputs in, SimulationData SD, int mype, double * kernel_init_time, Profile* profile) {
+unsigned long long run_event_based_simulation(Inputs in, SimulationData SD, int mype, double * kernel_init_time) {
 
         ////////////////////////////////////////////////////////////////////////////////
         // SUMMARY: Simulation Data Structure Manifest for "SD" Object
@@ -51,7 +51,6 @@ unsigned long long run_event_based_simulation(Inputs in, SimulationData SD, int 
         // Create Device Buffers
         ////////////////////////////////////////////////////////////////////////////////
 
-        double startP = get_time();
         int* num_nucs                   = sycl::malloc_device<int>(SD.length_num_nucs, sycl_q);
         double* concs                   = sycl::malloc_device<double>(SD.length_concs, sycl_q);
         int* mats                       = sycl::malloc_device<int>(SD.length_mats, sycl_q);
@@ -77,18 +76,12 @@ unsigned long long run_event_based_simulation(Inputs in, SimulationData SD, int 
         }
         sycl_q.memcpy(nuclide_grid, SD.nuclide_grid, SD.length_nuclide_grid * sizeof(NuclideGridPoint));
         sycl_q.wait();
-        profile->host_to_device_time = get_time() - startP;
 
         if(mype==0) printf("Beginning event based simulation...\n");
 
         int nwarmups = in.num_warmups;
         startP = 0.0;
         for (int it = 0; it < in.num_iterations + nwarmups; it++) {
-                if (it == nwarmups) {
-                        sycl_q.wait();
-                        startP = get_time();
-                }
-
                 ////////////////////////////////////////////////////////////////////////////////
                 // Define Device Kernel
                 ////////////////////////////////////////////////////////////////////////////////
@@ -157,14 +150,9 @@ unsigned long long run_event_based_simulation(Inputs in, SimulationData SD, int 
         }
         stop = get_time();
 
-        sycl_q.wait();
-        profile->kernel_time = get_time() - startP;
-
         if(mype==0) printf("Kernel initialization, compilation, and launch took %.2lf seconds.\n", stop-start);
 
-        startP = get_time();
         sycl_q.memcpy(verification_host, verification, in.lookups * sizeof(int)).wait();
-        profile->device_to_host_time = get_time() - startP;
 
         // Host reduces the verification array
         unsigned long long verification_scalar = 0;

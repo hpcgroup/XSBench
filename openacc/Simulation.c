@@ -11,7 +11,7 @@
 // are not yet implemented for this OpenMP targeting offload port.
 ////////////////////////////////////////////////////////////////////////////////////
 
-unsigned long long run_event_based_simulation(Inputs in, SimulationData SD, int mype, Profile* profile)
+unsigned long long run_event_based_simulation(Inputs in, SimulationData SD, int mype)
 {
 	if( mype == 0)
 		printf("Beginning event based simulation...\n");
@@ -41,8 +41,6 @@ unsigned long long run_event_based_simulation(Inputs in, SimulationData SD, int 
 	////////////////////////////////////////////////////////////////////////////////
 	unsigned long long * verification = (unsigned long long *) malloc(in.lookups * sizeof(unsigned long long));
 
-	double start = get_time();
-
 	int *num_nucs = SD.num_nucs;
 	double *concs = SD.concs;
 	int *mats = SD.mats;
@@ -65,11 +63,8 @@ unsigned long long run_event_based_simulation(Inputs in, SimulationData SD, int 
 			copyin(index_grid[:SD.length_index_grid])
 	}
 
-	profile->host_to_device_time = get_time() - start;
-
 	int nwarmups = in.num_warmups;
 	for (int it = 0; it < in.num_iterations + nwarmups; it++) {
-		if (it == nwarmups) start = get_time();
 		#pragma acc parallel loop \
 			present(num_nucs[:SD.length_num_nucs], concs[:SD.length_concs], \
 				mats[:SD.length_mats], unionized_energy_array[:SD.length_unionized_energy_array], \
@@ -130,14 +125,9 @@ unsigned long long run_event_based_simulation(Inputs in, SimulationData SD, int 
 			verification[i] = max_idx+1;
 		}
 	}
-	profile->kernel_time = get_time() - start;
-
-	start = get_time();
 
 	#pragma acc exit data \
 		copyout(verification[0:in.lookups])
-
-	profile->device_to_host_time = get_time() - start;
 
 	// Reduce validation hash on the host
 	unsigned long long validation_hash = 0;

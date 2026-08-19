@@ -12,7 +12,7 @@
 ////////////////////////////////////////////////////////////////////////////////////
 
 // use SYCL namespace to reduce symbol names
-unsigned long long run_event_based_simulation(Inputs in, SimulationData SD, int mype, double * kernel_init_time, Profile* profile) {
+unsigned long long run_event_based_simulation(Inputs in, SimulationData SD, int mype, double * kernel_init_time) {
 
         ////////////////////////////////////////////////////////////////////////////////
         // SUMMARY: Simulation Data Structure Manifest for "SD" Object
@@ -51,7 +51,6 @@ unsigned long long run_event_based_simulation(Inputs in, SimulationData SD, int 
         // Create Device Buffers
         ////////////////////////////////////////////////////////////////////////////////
 
-        double startP = get_time();
         // assign SYCL buffer to existing memory
         sycl::buffer<int> num_nucs_d(SD.num_nucs,SD.length_num_nucs);
         sycl::buffer<double> concs_d(SD.concs, SD.length_concs);
@@ -60,18 +59,12 @@ unsigned long long run_event_based_simulation(Inputs in, SimulationData SD, int 
         sycl::buffer<int> index_grid_d(SD.index_grid, SD.length_index_grid);
         sycl::buffer<NuclideGridPoint> nuclide_grid_d(SD.nuclide_grid, SD.length_nuclide_grid);
         sycl::buffer<int> verification_d(verification_host, in.lookups);
-        profile->host_to_device_time = get_time() - startP;
 
         if(mype==0) printf("Beginning event based simulation...\n");
 
         int nwarmups = in.num_warmups;
         startP = 0.0;
         for (int it = 0; it < in.num_iterations + nwarmups; it++) {
-                if (it == nwarmups) {
-                        sycl_q.wait();
-                        startP = get_time();
-                }
-
                 ////////////////////////////////////////////////////////////////////////////////
                 // Define Device Kernel
                 ////////////////////////////////////////////////////////////////////////////////
@@ -152,13 +145,10 @@ unsigned long long run_event_based_simulation(Inputs in, SimulationData SD, int 
         stop = get_time();
 
         sycl_q.wait();
-        profile->kernel_time = get_time() - startP;
 
         if(mype==0) printf("Kernel initialization, compilation, and launch took %.2lf seconds.\n", stop-start);
 
-        startP = get_time();
         verification_d.get_host_access();
-        profile->device_to_host_time = get_time() - startP;
 
         // Host reduces the verification array
         unsigned long long verification_scalar = 0;

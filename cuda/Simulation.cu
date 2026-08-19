@@ -12,12 +12,10 @@
 // line argument.
 ////////////////////////////////////////////////////////////////////////////////////
 
-unsigned long long run_event_based_simulation_baseline(Inputs in, SimulationData SD, int mype, Profile* profile)
+unsigned long long run_event_based_simulation_baseline(Inputs in, SimulationData SD, int mype)
 {
-	double start = get_time();
         // Move Data to GPU
         SimulationData GSD = move_simulation_data_to_device(in, mype, SD);
-	profile->host_to_device_time = get_time() - start;
 
         ////////////////////////////////////////////////////////////////////////////////
         // Configure & Launch Simulation Kernel
@@ -38,16 +36,13 @@ unsigned long long run_event_based_simulation_baseline(Inputs in, SimulationData
 	}
 	gpuErrchk( cudaPeekAtLastError() );
 	gpuErrchk( cudaDeviceSynchronize() );
-	profile->kernel_time = get_time() - start;
 
         ////////////////////////////////////////////////////////////////////////////////
         // Reduce Verification Results
         ////////////////////////////////////////////////////////////////////////////////
 
         if( mype == 0)	printf("Reducing verification results...\n");
-	start = get_time();
         gpuErrchk(cudaMemcpy(SD.verification, GSD.verification, in.lookups * sizeof(unsigned long), cudaMemcpyDeviceToHost) );
-	profile->device_to_host_time = get_time() - start;
 
         unsigned long verification_scalar = 0;
         for( int i =0; i < in.lookups; i++ )
@@ -1116,4 +1111,22 @@ unsigned long long run_event_based_simulation_optimization_6(Inputs in, Simulati
         gpuErrchk( cudaDeviceSynchronize() );
 
         return verification_scalar;
+}
+turn verification_scalar;
+}
+hronize() );
+
+        return verification_scalar;
+}
+rification_scalar;
+}
+) );
+
+        return verification_scalar;
+}
+hronize() );
+
+        return verification_scalar;
+}
+ication_scalar;
 }

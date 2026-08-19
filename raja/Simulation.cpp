@@ -22,7 +22,7 @@ using policy = RAJA::omp_parallel_for_exec;
 using policy = RAJA::seq_exec;
 #endif
 
-unsigned long long run_event_based_simulation_baseline(Inputs in, SimulationData SD, int mype, Profile* profile)
+unsigned long long run_event_based_simulation_baseline(Inputs in, SimulationData SD, int mype)
 {
         ////////////////////////////////////////////////////////////////////////////////
         // Configure & Launch Simulation Kernel
@@ -32,9 +32,7 @@ unsigned long long run_event_based_simulation_baseline(Inputs in, SimulationData
 
         auto& rm = umpire::ResourceManager::getInstance();
 
-	double start = get_time();
         SimulationData GSD = move_simulation_data_to_device(in, mype, SD);
-	profile->host_to_device_time = get_time() - start;
 
         int nthreads = 256;
         int nblocks = ceil( (double) in.lookups / (double) nthreads);
@@ -42,9 +40,6 @@ unsigned long long run_event_based_simulation_baseline(Inputs in, SimulationData
 	int nwarmups = in.num_warmups;
 	start = 0.0;
 	for (int it = 0; it < in.num_iterations + nwarmups; it++) {
-		if (it == nwarmups) {
-			start = get_time();
-		}
 		RAJA::forall<policy>(RAJA::RangeSegment(0, in.lookups), [=] RAJA_HOST_DEVICE (int i) {
 			// Set the initial seed value
 			uint64_t seed = STARTING_SEED;	
@@ -90,16 +85,13 @@ unsigned long long run_event_based_simulation_baseline(Inputs in, SimulationData
 			GSD.verification[i] = max_idx+1;
 		});
 	}
-	profile->kernel_time = get_time() - start;
 
         ////////////////////////////////////////////////////////////////////////////////
         // Reduce Verification Results
         ////////////////////////////////////////////////////////////////////////////////
         if( mype == 0)	printf("Reducing verification results...\n");
 
-	start = get_time();
         rm.copy(SD.verification, GSD.verification);
-	profile->device_to_host_time = get_time() - start;
 
         unsigned long long verification_scalar = 0;
         for(int i = 0; i < in.lookups; i++ )

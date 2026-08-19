@@ -11,7 +11,7 @@
 // are not yet implemented for this OpenMP targeting offload port.
 ////////////////////////////////////////////////////////////////////////////////////
 
-unsigned long long run_event_based_simulation(Inputs in, SimulationData SD, int mype, double* end, Profile* profile)
+unsigned long long run_event_based_simulation(Inputs in, SimulationData SD, int mype, double* end)
 {
 	if( mype == 0)
 		printf("Beginning event based simulation...\n");
@@ -39,8 +39,6 @@ unsigned long long run_event_based_simulation(Inputs in, SimulationData SD, int 
 
 	Kokkos::Timer start;
 	start.reset();
-
-	double startP = get_time();
 
 
         UIntView u_num_nucs(SD.num_nucs, SD.length_num_nucs);
@@ -92,13 +90,10 @@ unsigned long long run_event_based_simulation(Inputs in, SimulationData SD, int 
 			Kokkos::create_mirror_view(d_verification);
 	Kokkos::deep_copy(d_verification, verification);
 
-	profile->host_to_device_time = get_time() - startP;
-
 	int nwarmups = in.num_warmups;
 	for (int it = 0; it < in.num_iterations + nwarmups; it++) {
 		if (it == nwarmups) {
 			Kokkos::fence();
-			startP = get_time();
 		}
 		Kokkos::parallel_for("Simulation",
 				     Kokkos::RangePolicy<Kokkos::DefaultExecutionSpace>(0, in.lookups),
@@ -159,13 +154,10 @@ unsigned long long run_event_based_simulation(Inputs in, SimulationData SD, int 
 	}
 
 	Kokkos::fence();
-	profile->kernel_time = get_time() - startP;
 
 	startP = get_time();
 
 	Kokkos::deep_copy(verification, d_verification);
-
-	profile->device_to_host_time = get_time() - startP;
 
 	// End Simulation Timer
 	*end = start.seconds();

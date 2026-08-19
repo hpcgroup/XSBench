@@ -13,7 +13,7 @@
 // line argument.
 ////////////////////////////////////////////////////////////////////////////////////
 
-unsigned long long run_event_based_simulation_baseline(Inputs in, SimulationData GSD, int mype, Profile* profile)
+unsigned long long run_event_based_simulation_baseline(Inputs in, SimulationData GSD, int mype)
 {
 	////////////////////////////////////////////////////////////////////////////////
 	// Configure & Launch Simulation Kernel
@@ -24,24 +24,19 @@ unsigned long long run_event_based_simulation_baseline(Inputs in, SimulationData
 	int nblocks = ceil( (double) in.lookups / (double) nthreads);
 
 	int nwarmups = in.num_warmups;
-	double start = 0.0;
 	for (int i = 0; i < in.num_iterations + nwarmups; i++) {
 		if (i == nwarmups) {
 			gpuErrchk( hipDeviceSynchronize() );
-			start = get_time();
 		}
 		hipLaunchKernelGGL(xs_lookup_kernel_baseline, dim3(nblocks), dim3(nthreads), 0, 0,  in, GSD );
 	}
 	gpuErrchk( hipPeekAtLastError() );
 	gpuErrchk( hipDeviceSynchronize() );
-	profile->kernel_time = get_time() - start;
 
 	size_t sz = in.lookups * sizeof(unsigned long);
 	unsigned long * v = (unsigned long *) malloc(sz);
 
-	start = get_time();
 	gpuErrchk( hipMemcpy(v, GSD.verification, sz, hipMemcpyDeviceToHost) );
-	profile->device_to_host_time = get_time() - start;
 
 	////////////////////////////////////////////////////////////////////////////////
 	// Reduce Verification Results
