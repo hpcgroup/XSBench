@@ -12,7 +12,7 @@
 ////////////////////////////////////////////////////////////////////////////////////
 
 // use SYCL namespace to reduce symbol names
-unsigned long long run_event_based_simulation(Inputs in, SimulationData SD, int mype, double * kernel_init_time, Profile* profile) {
+unsigned long long run_event_based_simulation(Inputs in, SimulationData SD, int mype, double * kernel_init_time) {
 
         ////////////////////////////////////////////////////////////////////////////////
         // SUMMARY: Simulation Data Structure Manifest for "SD" Object
@@ -51,7 +51,6 @@ unsigned long long run_event_based_simulation(Inputs in, SimulationData SD, int 
         // Create Device Buffers
         ////////////////////////////////////////////////////////////////////////////////
 
-        double startP = get_time();
         // assign SYCL buffer to existing memory
         sycl::buffer<int> num_nucs_d(SD.num_nucs,SD.length_num_nucs);
         sycl::buffer<double> concs_d(SD.concs, SD.length_concs);
@@ -60,105 +59,92 @@ unsigned long long run_event_based_simulation(Inputs in, SimulationData SD, int 
         sycl::buffer<int> index_grid_d(SD.index_grid, SD.length_index_grid);
         sycl::buffer<NuclideGridPoint> nuclide_grid_d(SD.nuclide_grid, SD.length_nuclide_grid);
         sycl::buffer<int> verification_d(verification_host, in.lookups);
-        profile->host_to_device_time = get_time() - startP;
 
         if(mype==0) printf("Beginning event based simulation...\n");
 
-        int nwarmups = in.num_warmups;
-        startP = 0.0;
-        for (int it = 0; it < in.num_iterations + nwarmups; it++) {
-                if (it == nwarmups) {
-                        sycl_q.wait();
-                        startP = get_time();
-                }
+        ////////////////////////////////////////////////////////////////////////////////
+        // Define Device Kernel
+        ////////////////////////////////////////////////////////////////////////////////
+
+        // queue a kernel to be run, as a lambda
+        sycl_q.submit([&](sycl::handler &cgh) {
+                ////////////////////////////////////////////////////////////////////////////////
+                // Create Device Accessors for Device Buffers
+                ////////////////////////////////////////////////////////////////////////////////
+                sycl::accessor num_nucs {num_nucs_d, cgh, sycl::read_only};
+                sycl::accessor concs {concs_d, cgh, sycl::read_only};
+                sycl::accessor mats {mats_d, cgh, sycl::read_only};
+                sycl::accessor unionized_energy_array {unionized_energy_array_d, cgh, sycl::read_only};
+                sycl::accessor index_grid {index_grid_d, cgh, sycl::read_only};
+                sycl::accessor nuclide_grid {nuclide_grid_d, cgh, sycl::read_only};
+                sycl::accessor verification {verification_d, cgh, sycl::write_only, sycl::no_init};
 
                 ////////////////////////////////////////////////////////////////////////////////
-                // Define Device Kernel
+                // XS Lookup Simulation Loop
                 ////////////////////////////////////////////////////////////////////////////////
+                cgh.parallel_for<sycl::kernel>(sycl::range<1>(in.lookups), [=](sycl::id<1> idx) {
+                        // get the index to operate on, first dimemsion
+                        size_t i = idx[0];
 
-                // queue a kernel to be run, as a lambda
-                sycl_q.submit([&](sycl::handler &cgh) {
-                        ////////////////////////////////////////////////////////////////////////////////
-                        // Create Device Accessors for Device Buffers
-                        ////////////////////////////////////////////////////////////////////////////////
-                        sycl::accessor num_nucs {num_nucs_d, cgh, sycl::read_only};
-                        sycl::accessor concs {concs_d, cgh, sycl::read_only};
-                        sycl::accessor mats {mats_d, cgh, sycl::read_only};
-                        sycl::accessor unionized_energy_array {unionized_energy_array_d, cgh, sycl::read_only};
-                        sycl::accessor index_grid {index_grid_d, cgh, sycl::read_only};
-                        sycl::accessor nuclide_grid {nuclide_grid_d, cgh, sycl::read_only};
-                        sycl::accessor verification {verification_d, cgh, sycl::write_only, sycl::no_init};
+                        // Set the initial seed value
+                        uint64_t seed = STARTING_SEED;	
 
-                        ////////////////////////////////////////////////////////////////////////////////
-                        // XS Lookup Simulation Loop
-                        ////////////////////////////////////////////////////////////////////////////////
-                        cgh.parallel_for<sycl::kernel>(sycl::range<1>(in.lookups), [=](sycl::id<1> idx) {
-                                // get the index to operate on, first dimemsion
-                                size_t i = idx[0];
+                        // Forward seed to lookup index (we need 2 samples per lookup)
+                        seed = fast_forward_LCG(seed, 2*i);
 
-                                // Set the initial seed value
-                                uint64_t seed = STARTING_SEED;	
+                        // Randomly pick an energy and material for the particle
+                        double p_energy = LCG_random_double(&seed);
+                        int mat         = pick_mat(&seed); 
 
-                                // Forward seed to lookup index (we need 2 samples per lookup)
-                                seed = fast_forward_LCG(seed, 2*i);
+                        // debugging
+                        //printf("E = %lf mat = %d\n", p_energy, mat);
 
-                                // Randomly pick an energy and material for the particle
-                                double p_energy = LCG_random_double(&seed);
-                                int mat         = pick_mat(&seed); 
+                        double macro_xs_vector[5] = {0};
 
-                                // debugging
-                                //printf("E = %lf mat = %d\n", p_energy, mat);
+                        // Perform macroscopic Cross Section Lookup
+                        calculate_macro_xs(
+                                p_energy,        // Sampled neutron energy (in lethargy)
+                                mat,             // Sampled material type index neutron is in
+                                in.n_isotopes,   // Total number of isotopes in simulation
+                                in.n_gridpoints, // Number of gridpoints per isotope in simulation
+                                num_nucs,     // 1-D array with number of nuclides per material
+                                concs,        // Flattened 2-D array with concentration of each nuclide in each material
+                                unionized_energy_array, // 1-D Unionized energy array
+                                index_grid,   // Flattened 2-D grid holding indices into nuclide grid for each unionized energy level
+                                nuclide_grid, // Flattened 2-D grid holding energy levels and XS_data for all nuclides in simulation
+                                mats,         // Flattened 2-D array with nuclide indices defining composition of each type of material
+                                macro_xs_vector, // 1-D array with result of the macroscopic cross section (5 different reaction channels)
+                                in.grid_type,    // Lookup type (nuclide, hash, or unionized)
+                                in.hash_bins,    // Number of hash bins used (if using hash lookup type)
+                                SD.max_num_nucs  // Maximum number of nuclides present in any material
+                        );
 
-                                double macro_xs_vector[5] = {0};
-
-                                // Perform macroscopic Cross Section Lookup
-                                calculate_macro_xs(
-                                        p_energy,        // Sampled neutron energy (in lethargy)
-                                        mat,             // Sampled material type index neutron is in
-                                        in.n_isotopes,   // Total number of isotopes in simulation
-                                        in.n_gridpoints, // Number of gridpoints per isotope in simulation
-                                        num_nucs,     // 1-D array with number of nuclides per material
-                                        concs,        // Flattened 2-D array with concentration of each nuclide in each material
-                                        unionized_energy_array, // 1-D Unionized energy array
-                                        index_grid,   // Flattened 2-D grid holding indices into nuclide grid for each unionized energy level
-                                        nuclide_grid, // Flattened 2-D grid holding energy levels and XS_data for all nuclides in simulation
-                                        mats,         // Flattened 2-D array with nuclide indices defining composition of each type of material
-                                        macro_xs_vector, // 1-D array with result of the macroscopic cross section (5 different reaction channels)
-                                        in.grid_type,    // Lookup type (nuclide, hash, or unionized)
-                                        in.hash_bins,    // Number of hash bins used (if using hash lookup type)
-                                        SD.max_num_nucs  // Maximum number of nuclides present in any material
-                                );
-
-                                // For verification, and to prevent the compiler from optimizing
-                                // all work out, we interrogate the returned macro_xs_vector array
-                                // to find its maximum value index, then increment the verification
-                                // value by that index. In this implementation, we store to a global
-                                // array that will get tranferred back and reduced on the host.
-                                double max = -1.0;
-                                int max_idx = 0;
-                                for(int j = 0; j < 5; j++ )
+                        // For verification, and to prevent the compiler from optimizing
+                        // all work out, we interrogate the returned macro_xs_vector array
+                        // to find its maximum value index, then increment the verification
+                        // value by that index. In this implementation, we store to a global
+                        // array that will get tranferred back and reduced on the host.
+                        double max = -1.0;
+                        int max_idx = 0;
+                        for(int j = 0; j < 5; j++ )
+                        {
+                                if( macro_xs_vector[j] > max )
                                 {
-                                        if( macro_xs_vector[j] > max )
-                                        {
-                                                max = macro_xs_vector[j];
-                                                max_idx = j;
-                                        }
+                                        max = macro_xs_vector[j];
+                                        max_idx = j;
                                 }
-                                verification[i] = max_idx+1;
+                        }
+                        verification[i] = max_idx+1;
 
-                        });
                 });
-        }
+        });
         stop = get_time();
 
         sycl_q.wait();
-        profile->kernel_time = get_time() - startP;
 
         if(mype==0) printf("Kernel initialization, compilation, and launch took %.2lf seconds.\n", stop-start);
 
-        startP = get_time();
         verification_d.get_host_access();
-        profile->device_to_host_time = get_time() - startP;
 
         // Host reduces the verification array
         unsigned long long verification_scalar = 0;

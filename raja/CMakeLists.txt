@@ -25,14 +25,16 @@ find_package(RAJA REQUIRED)
 find_package(Umpire REQUIRED)
 target_link_libraries(XSBench RAJA umpire)
 
-if (${RAJA_BACK_END} STREQUAL "CUDA")
+if (RAJA_ENABLE_CUDA)
+    message(STATUS "RAJA CUDA support enabled")
     enable_language(CUDA)
     set(CMAKE_CUDA_STANDARD 14)
 
     set_source_files_properties(${SOURCE} PROPERTIES LANGUAGE CUDA)
     set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} -extended-lambda --expt-relaxed-constexpr --restrict --keep")
     set_target_properties(XSBench PROPERTIES CUDA_RESOLVE_DEVICE_SYMBOLS ON)
-elseif (${RAJA_BACK_END} STREQUAL "HIP")
+  elseif (RAJA_ENABLE_HIP)
+    message(STATUS "RAJA HIP support enabled")
     enable_language(HIP)
     set(CMAKE_HIP_STANDARD 14)
 

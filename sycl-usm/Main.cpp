@@ -68,8 +68,6 @@ int main( int argc, char* argv[] )
                 border_print();
         }
 
-	Profile profile;
-
         // Start Simulation Timer
         omp_start = get_time();
         double kernel_init_time;
@@ -79,7 +77,7 @@ int main( int argc, char* argv[] )
         {
                 if( in.kernel_id == 0 )
                 {
-                        verification = run_event_based_simulation(in, SD, mype, &kernel_init_time, &profile);
+                        verification = run_event_based_simulation(in, SD, mype, &kernel_init_time);
                 }
                 else
                 {
@@ -116,8 +114,6 @@ int main( int argc, char* argv[] )
 #ifdef MPI
         MPI_Finalize();
 #endif
-
-	print_profile(profile, in);
 
         return is_invalid_result;
 }
